@@ -1,0 +1,32 @@
+.medications-list {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .medication-item {
+    margin-bottom: 10px; /* Adds space between each medication */
+  }
+  
+  .medication-item a {
+    text-decoration: none;
+    color: #007bff;
+    font-weight: bold;
+  }
+  
+  .medication-item a:hover {
+    color: #0056b3;
+  }
+  
+  h3 {
+    margin-top: 30px;
+  }
+  
+  section {
+    padding: 20px;
+    margin-top: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+  }
+  
