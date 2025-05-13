@@ -8,6 +8,7 @@ import RiskPredictionForm from './pages/RiskPredictionForm';
 import CreatePatient from './pages/CreatePatient'; // Importing CreatePatient
 import TherapyDashboard from './pages/TherapyDashboard'; // Importing TherapyDashboard
 import TherapyEffectivenessForm from './pages/TherapyEffectivenessForm';
+import TreatmentRecommendationDashboard from './pages/TreatmentRecommendationDashboard.jsx';
 import TreatmentRecommendationForm from './pages/TreatmentRecommendationForm';
 import './App.css';
 
@@ -30,7 +31,7 @@ function App() {
           <Route path="/therapy-effectiveness/:id" element={<TherapyEffectivenessForm />} />
 
           {/* Route for TreatmentRecommendationForm */}
-          <Route path="/treatment-recommendation" element={<TreatmentRecommendationForm />} />
+          <Route path="/treatment-recommendation" element={<TreatmentRecommendationDashboard />} />
           <Route path="/treatment-recommendation/:id" element={<TreatmentRecommendationForm />} />
           {/* Route for CreatePatient */}
           <Route path="/patients/create" element={<CreatePatient />} /> {/* Route for CreatePatient */}

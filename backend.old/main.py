@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Load the model
-model = joblib.load("ridge_best_model.pkl")  # change to your model path
+model = joblib.load("risk_model_rf.pkl")  # change to your model path
 
 # Define request body
 class PredictionRequest(BaseModel):

@@ -10,52 +10,97 @@ function RiskPredictionForm() {
   const [patientData, setPatientData] = useState(null);
 
   useEffect(() => {
-    async function fetchPatient() {
+    async function fetchPatientAndPredict() {
       try {
         const res = await axios.get(`http://localhost:8000/api/patients/${id}`);
-        setPatientData(res.data);
+        const data = res.data;
+        setPatientData(data);
+
+        const features = [
+          parseFloat(data.hba1c_1st_visit),
+          parseFloat(data.hba1c_2nd_visit),
+          parseFloat(data.fvg_1),
+          parseFloat(data.fvg_2),
+          parseFloat(data.avg_fvg_1_2),
+          parseFloat(data.reduction_a),
+          parseFloat(data.reduction_a_per_day),
+          parseFloat(data.fvg_delta_1_2)
+        ];
+
+        if (features.some(val => isNaN(val))) {
+          setError('Invalid or missing input data.');
+          setLoading(false);
+          return;
+        }
+
+        const predictionRes = await axios.post('http://localhost:8001/predict', {
+          features: features
+        });
+
+        const numericRisk = parseFloat(predictionRes.data.prediction);
+        const riskLabel = mapNumericRisk(numericRisk);
+        const riskColor = getRiskColor(riskLabel);
+
+        setResult({ value: numericRisk.toFixed(2), label: riskLabel, color: riskColor });
         setLoading(false);
       } catch (err) {
-        setError('Failed to load patient data');
+        setError('Failed to fetch or predict.');
         setLoading(false);
       }
     }
-    fetchPatient();
+
+    fetchPatientAndPredict();
   }, [id]);
 
-  const handleSubmit = async () => {
-    setResult(null);
-    setError(null);
+  const mapNumericRisk = (val) => {
+    if (val < 5.7) return 'Normal';
+    if (val < 6.5) return 'At Risk';
+    if (val < 7.1) return 'Moderate Risk';
+    if (val < 8.1) return 'Risky';
+    if (val <= 9.0) return 'Very Risky';
+    return 'Critical';
+  };
 
-    if (!patientData) return;
-
-    const payload = {
-      HbA1c1: parseFloat(patientData.hba1c_1st_visit),
-      HbA1c2: parseFloat(patientData.hba1c_2nd_visit),
-      FVG1: parseFloat(patientData.fvg_1),
-      FVG2: parseFloat(patientData.fvg_2),
-      Avg_FVG_1_2: parseFloat(patientData.avg_fvg_1_2),
-      ReductionA: parseFloat(patientData.reduction_a),
-      ReductionA_per_day: parseFloat(patientData.reduction_a_per_day),
-      FVG_Delta_1_2: parseFloat(patientData.fvg_delta_1_2)
-    };
-
-    if (Object.values(payload).some(val => isNaN(val))) {
-      setError('One or more fields are invalid or missing.');
-      return;
-    }
-
-    try {
-      const res = await axios.post('http://localhost:8000/api/predict', payload);
-      setResult(res.data.prediction);
-    } catch (err) {
-      setError('Prediction failed. Please check input or server.');
+  const getRiskColor = (label) => {
+    switch (label) {
+      case 'Normal': return 'bg-green-500';
+      case 'At Risk': return 'bg-yellow-400';
+      case 'Moderate Risk': return 'bg-yellow-500';
+      case 'Risky': return 'bg-orange-500';
+      case 'Very Risky': return 'bg-red-500';
+      case 'Critical': return 'bg-red-800';
+      default: return 'bg-gray-400';
     }
   };
 
   if (loading) {
-    return <div className="p-6 text-center">Loading patient data...</div>;
+    return <div className="p-6 text-center">Loading patient and risk prediction...</div>;
   }
+
+  const getKeyFactors = () => {
+    const factors = [];
+
+    if (patientData.hba1c_1st_visit > 8) {
+      factors.push(`HbA1c at 1st visit is high (${patientData.hba1c_1st_visit}%)`);
+    } else if (patientData.hba1c_1st_visit < 5.7) {
+      factors.push(`HbA1c at 1st visit is in normal range (${patientData.hba1c_1st_visit}%)`);
+    }
+
+    if (patientData.fvg_1 > 130) {
+      factors.push(`FVG at 1st visit is elevated (${patientData.fvg_1} mg/dL)`);
+    }
+
+    if (patientData.reduction_a_per_day < 0.01) {
+      factors.push(`Daily HbA1c drop is low (${patientData.reduction_a_per_day?.toFixed(3)})`);
+    }
+
+    if (patientData.fvg_delta_1_2 > 0) {
+      factors.push(`FVG increased between visits (+${patientData.fvg_delta_1_2})`);
+    }
+
+    return factors;
+  };
+
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
@@ -63,76 +108,83 @@ function RiskPredictionForm() {
         Diabetes Complication Risk Assessment
       </h2>
       <p className="text-center text-gray-600 mb-10">
-        This tool analyzes patient metrics to predict the risk of diabetes-related complications based on treatment response patterns.
+        Automatically predicts patient complication risk based on HbA1c, FVG, and therapy indicators.
       </p>
 
-      {/* Metrics Display */}
+      {/* Overview */}
       <div className="grid md:grid-cols-3 gap-6 bg-white rounded-xl shadow p-6">
-        {/* Left Patient Card */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl p-6 space-y-4 flex flex-col justify-center">
-          <div className="text-lg font-semibold">{patientData.name}</div>
-          <div>{patientData.gender}, {patientData.age || '—'} years</div>
-          <div><span className="font-semibold">Insulin Type:</span> {patientData.insulin_regimen_type}</div>
-          <div className="text-sm text-blue-100">
-            <p><span className="font-semibold">Medical History:</span><br />{patientData.medicalHistory || 'N/A'}</p>
-            <p className="mt-2"><span className="font-semibold">Medications:</span><br />{patientData.medications || '—'}</p>
-          </div>
+        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl p-6 space-y-4">
+          <h3 className="text-xl font-bold">{patientData.name}</h3>
+          <p>{patientData.gender}, {patientData.age} y/o</p>
+          <p><strong>Insulin Type:</strong> {patientData.insulin_regimen_type}</p>
+          <p className="text-sm text-blue-100">
+            <strong>Med History:</strong><br />{patientData.medicalHistory || '—'}<br />
+            <strong>Medications:</strong><br />{patientData.medications || '—'}
+          </p>
         </div>
 
-        {/* Metrics Grid */}
         <div className="col-span-2 space-y-6">
           <div>
-            <h3 className="font-semibold text-sm text-gray-600 mb-2">Glycemic Control Metrics</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-sm">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Glycemic Metrics</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <MetricBox label="HbA1c (1st)" value={patientData.hba1c_1st_visit} />
-              <MetricBox label="HbA1c (2nd)" value={patientData.hba1c_2nd_visit} sub={`↓ ${(patientData.reduction_a).toFixed(1)}`} />
+              <MetricBox label="HbA1c (2nd)" value={patientData.hba1c_2nd_visit} />
               <MetricBox label="FVG (1st)" value={patientData.fvg_1} />
-              <MetricBox label="FVG (2nd)" value={patientData.fvg_2} sub={`↓ ${(patientData.fvg_delta_1_2)}`} />
+              <MetricBox label="FVG (2nd)" value={patientData.fvg_2} />
             </div>
           </div>
-
           <div>
-            <h3 className="font-semibold text-sm text-gray-600 mb-2">Treatment Response Metrics</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-sm">
-              <MetricBox label="HbA1c Reduction" value={patientData.reduction_a?.toFixed(1)} />
-              <MetricBox label="Daily Reduction" value={patientData.reduction_a_per_day?.toFixed(3)} />
-              <MetricBox label="FVG Change" value={patientData.fvg_delta_1_2} />
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Treatment Trends</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+              <MetricBox label="HbA1c Δ" value={patientData.reduction_a?.toFixed(1)} />
+              <MetricBox label="Daily HbA1c Drop" value={patientData.reduction_a_per_day?.toFixed(3)} />
+              <MetricBox label="FVG Δ" value={patientData.fvg_delta_1_2} />
               <MetricBox label="Avg FVG" value={patientData.avg_fvg_1_2} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Prediction Button */}
-      <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center justify-center space-y-4">
-        <h3 className="font-semibold text-lg text-gray-700">Risk Assessment</h3>
-        <button
-          onClick={handleSubmit}
-          className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-2 px-6 rounded hover:from-blue-600 hover:to-indigo-700 transition"
-        >
-          📊 Calculate Complication Risk
-        </button>
-        {result && (
-          <div className="text-xl font-bold text-green-600">Predicted Risk: {result}</div>
+      {/* Result */}
+      <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center space-y-4">
+        <h3 className="text-lg font-semibold text-gray-800">Predicted Complication Risk</h3>
+        {result ? (
+          <div className={`w-28 h-28 flex items-center justify-center text-white text-2xl font-bold rounded-full shadow-md ${result.color}`}>
+            {result.value}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">No result available</div>
         )}
-        {error && (
-          <div className="text-red-600 text-sm">{error}</div>
+        {result?.label && (
+          <>
+            <p className="text-sm font-medium text-gray-600">
+              Category: <span className="font-semibold">{result.label}</span>
+            </p>
+            <div className="mt-4 text-left w-full max-w-2xl text-sm text-gray-700 bg-gray-50 border border-gray-200 p-4 rounded shadow-sm">
+              <h4 className="font-semibold mb-2">🔍 Key Factors:</h4>
+              <ul className="list-disc ml-5 space-y-1">
+                {getKeyFactors().map((line, idx) => (
+                  <li key={idx}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          </>
         )}
+
+
       </div>
 
       <p className="text-center text-xs text-gray-400 mt-6">
-        This risk assessment tool uses AI to analyze treatment response patterns and predict complication risk.
-        Always use clinical judgment in conjunction with these recommendations.
+        This assessment is powered by AI. Use clinical judgment alongside predictions for decision-making.
       </p>
     </div>
   );
 }
 
-const MetricBox = ({ label, value, sub }) => (
+const MetricBox = ({ label, value }) => (
   <div className="bg-gray-50 border rounded-lg p-4 shadow-sm">
     <div className="text-gray-800 font-semibold text-lg">{value ?? '—'}</div>
     <div className="text-xs text-gray-600">{label}</div>
-    {sub && <div className="text-xs text-green-500 font-medium">{sub}</div>}
   </div>
 );
 
