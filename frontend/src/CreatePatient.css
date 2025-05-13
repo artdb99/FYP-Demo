@@ -1,0 +1,54 @@
+.create-patient-container {
+    font-weight: bold;
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .create-patient-form {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .create-patient-form label {
+    margin-bottom: 15px;
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    font-size: 16px;
+  }
+  
+  .create-patient-form input,
+  .create-patient-form select,
+  .create-patient-form textarea {
+    margin-top: 5px;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  
+  .create-patient-form textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  .create-patient-form button {
+    margin-top: 20px;
+    padding: 12px;
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .create-patient-form button:hover {
+    background-color: #125ea5;
+  }
+  
