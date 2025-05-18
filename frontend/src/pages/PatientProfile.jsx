@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useUser } from '../UserContext';
 import { useParams } from 'react-router-dom';
 import Chart from 'chart.js/auto';
 import './PatientProfile.css'; // Assuming you have some CSS for styling
 
 const PatientProfile = () => {
   const { id } = useParams();
+  const { user } = useUser();
   const [patient, setPatient] = useState(null);
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
@@ -90,6 +92,17 @@ const PatientProfile = () => {
             alt="avatar"
           />
           <h2 className="text-xl font-bold text-gray-800">{patient.name}</h2>
+          {user?.role === 'patient' && parseInt(user.id) === patient.user_id && (
+            <div className="flex justify-center">
+              <a
+                href="/profile/edit"
+                className="inline-block bg-indigo-600 text-white px-4 py-2 mt-2 rounded hover:bg-indigo-700 transition text-sm"
+              >
+                ✏️ Edit My Profile
+              </a>
+            </div>
+          )}
+
           <p className="text-gray-500 text-sm">{patient.gender}, {patient.age} years old</p>
           <span className="inline-block bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full">
             Improving

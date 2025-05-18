@@ -21,93 +21,105 @@ const PatientsList = () => {
 
   const formatGap = (days) => (days != null ? `${Math.round(days)} days` : '-');
 
+  const getStatusTag = (p) => {
+    if (p.reduction_a < 0 && p.fvg_delta_1_2 < 0 && p.dds_trend_1_3 < 0) return 'Improving';
+    if (p.reduction_a > 0 && p.fvg_delta_1_2 > 0) return 'Worsening';
+    return 'Stable';
+  };
+
+  const insulinColors = {
+    Basal: 'bg-indigo-100 text-indigo-700',
+    Bolus: 'bg-purple-100 text-purple-700',
+    PBD: 'bg-blue-100 text-blue-700',
+    BB: 'bg-teal-100 text-teal-700',
+    PTDS: 'bg-yellow-100 text-yellow-700',
+    None: 'bg-gray-100 text-gray-500',
+  };
+
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
-      {/* Header & Summary */}
+    <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-gray-800">Patient List</h2>
-          <p className="text-gray-500 text-sm">Manage and monitor your patients’ diabetes treatment progress</p>
+          <p className="text-sm text-gray-500">Monitor all patient clinical indicators and treatment progress</p>
         </div>
-        <Link to="/patients/create" className="bg-blue-600 text-white font-medium px-4 py-2 rounded hover:bg-blue-700 transition">
+        <Link to="/patients/create" className="bg-blue-600 text-white font-semibold px-5 py-2 rounded hover:bg-blue-700 transition">
           + Add Patient
         </Link>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard
-          label="Total Patients"
-          value={patients.length}
-          change={`+${Math.round((patients.length / 200) * 100 - 100)}%`} // assuming previous = 200
-          icon="👥"
-        />
-
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        <SummaryCard label="Total Patients" value={patients.length} change={`+${Math.round((patients.length / 200) * 100 - 100)}%`} />
         <SummaryCard
           label="Improved HbA1c"
-          value={
-            patients.length
-              ? `${Math.round(
-                (patients.filter(p => parseFloat(p.reduction_a) < 0).length / patients.length) * 100
-              )}%`
-              : '0%'
-          }
+          value={`${Math.round(patients.filter(p => parseFloat(p.reduction_a) < 0).length / patients.length * 100 || 0)}%`}
           change=""
-          icon="🛡️"
         />
-
         <SummaryCard
           label="Avg. Follow-up"
           value={
             patients.length
-              ? `${Math.round(
-                patients
-                  .filter(p => p.gap_from_first_clinical_visit != null)
-                  .reduce((acc, p) => acc + parseFloat(p.gap_from_first_clinical_visit), 0) /
-                patients.filter(p => p.gap_from_first_clinical_visit != null).length
-              )} days`
+              ? `${Math.round(patients.filter(p => p.gap_from_first_clinical_visit).reduce((acc, p) => acc + parseFloat(p.gap_from_first_clinical_visit), 0) / patients.filter(p => p.gap_from_first_clinical_visit).length)} days`
               : '-'
           }
           change=""
-          icon="📅"
+        />
+        <SummaryCard
+          label="Avg. FVG Δ"
+          value={
+            patients.length
+              ? (
+                  patients.reduce((acc, p) => acc + (parseFloat(p.fvg_delta_1_2) || 0), 0) /
+                  patients.length
+                ).toFixed(1)
+              : '-'
+          }
+          change=""
         />
       </div>
 
-
-      {/* Patient Table */}
-      <div className="overflow-x-auto bg-white shadow rounded-lg">
+      {/* Table */}
+      <div className="overflow-x-auto bg-white shadow rounded-lg border">
         <table className="min-w-full text-sm text-left text-gray-700">
-          <thead className="bg-gray-100 border-b text-xs uppercase font-medium text-gray-600">
+          <thead className="bg-gray-100 text-xs uppercase font-semibold text-gray-500">
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Age</th>
               <th className="px-4 py-3">Gender</th>
-              <th className="px-4 py-3">Insulin Regimen</th>
+              <th className="px-4 py-3">Insulin</th>
               <th className="px-4 py-3">FVG</th>
-              <th className="px-4 py-3">HbA1c (1st)</th>
-              <th className="px-4 py-3">HbA1c (2nd)</th>
-              <th className="px-4 py-3">HbA1c (3rd)</th>
+              <th className="px-4 py-3">HbA1c 1st</th>
+              <th className="px-4 py-3">HbA1c 2nd</th>
+              <th className="px-4 py-3">HbA1c 3rd</th>
               <th className="px-4 py-3">Avg FVG</th>
               <th className="px-4 py-3">FVG Δ</th>
               <th className="px-4 py-3">HbA1c Δ</th>
-              <th className="px-4 py-3">HbA1c Drop/Day</th>
+              <th className="px-4 py-3">Drop/Day</th>
               <th className="px-4 py-3">DDS Δ</th>
               <th className="px-4 py-3">Gap (1st→3rd)</th>
               <th className="px-4 py-3">Gap (2nd→3rd)</th>
-              <th className="px-4 py-3">Remarks</th>
+              <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
             {patients.map((p) => (
               <tr key={p.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-blue-600">
+                <td className="px-4 py-3 text-blue-600 font-medium">
                   <Link to={`/patient/${p.id}`} className="hover:underline">{p.name}</Link>
                 </td>
                 <td className="px-4 py-3">{p.age}</td>
-                <td className="px-4 py-3">{p.gender}</td>
                 <td className="px-4 py-3">
-                  <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    p.gender === 'Male' ? 'bg-blue-100 text-blue-600' : 'bg-pink-100 text-pink-600'
+                  }`}>
+                    {p.gender}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs px-2 py-1 rounded-full ${insulinColors[p.insulin_regimen_type] || 'bg-gray-100 text-gray-500'}`}>
                     {p.insulin_regimen_type || '-'}
                   </span>
                 </td>
@@ -122,21 +134,22 @@ const PatientsList = () => {
                 <td className="px-4 py-3">{formatTrend(p.dds_trend_1_3)}</td>
                 <td className="px-4 py-3">{formatGap(p.gap_from_initial_visit)}</td>
                 <td className="px-4 py-3">{formatGap(p.gap_from_first_clinical_visit)}</td>
-                <td className="px-4 py-3 text-gray-700">{p.remarks || '-'}</td>
-                <td className="px-4 py-3 flex gap-2 justify-center text-blue-600 text-sm">
+                <td className="px-4 py-3">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    getStatusTag(p) === 'Improving' ? 'bg-green-100 text-green-700' :
+                    getStatusTag(p) === 'Worsening' ? 'bg-red-100 text-red-600' :
+                    'bg-yellow-100 text-yellow-600'
+                  }`}>
+                    {getStatusTag(p)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 flex justify-center gap-2 text-blue-600">
                   <Link to={`/patient/${p.id}`} title="View"><Eye size={16} /></Link>
                   <Link to={`/treatment-recommendation/${p.id}`} title="Edit"><Pencil size={16} /></Link>
                   <Link to={`/predict/${p.id}`} title="Predict" className="underline text-xs ml-1">Risk</Link>
                 </td>
               </tr>
             ))}
-            {patients.length === 0 && (
-              <tr>
-                <td colSpan="17" className="text-center py-6 text-gray-500">
-                  No patient records found.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -144,14 +157,12 @@ const PatientsList = () => {
   );
 };
 
-// Summary Card Component
-const SummaryCard = ({ label, value, change, icon, down = false }) => (
-  <div className="bg-white border rounded-lg p-4 shadow-sm">
-    <div className="text-sm text-gray-500">{label}</div>
-    <div className="text-2xl font-bold text-gray-800 mt-1 mb-2">{value}</div>
-    <div className={`text-sm ${down ? 'text-red-500' : 'text-green-600'}`}>
-      {down ? '↓' : '↑'} {change}
-    </div>
+// Summary card
+const SummaryCard = ({ label, value, change }) => (
+  <div className="bg-white border rounded-xl p-4 shadow text-center">
+    <div className="text-sm text-gray-500 mb-1">{label}</div>
+    <div className="text-2xl font-bold text-gray-800">{value}</div>
+    {change && <div className="text-sm text-green-600">{change}</div>}
   </div>
 );
 

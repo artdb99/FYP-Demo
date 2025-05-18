@@ -15,7 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Load the model
-model = joblib.load("risk_model_rf.pkl")  # change to your model path
+model = joblib.load("ridge_best_model.pkl")  # change to your model path
 
 # Define request body
 class PredictionRequest(BaseModel):
@@ -23,6 +23,7 @@ class PredictionRequest(BaseModel):
 
 @app.post("/predict")
 def predict(req: PredictionRequest):
+    print("Received:", req.features)  # 👈 Add this
     input_data = np.array(req.features).reshape(1, -1)
     prediction = model.predict(input_data)
     return {"prediction": float(prediction[0])}

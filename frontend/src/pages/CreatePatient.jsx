@@ -46,13 +46,9 @@ const CreatePatient = () => {
       egfr: parseFloat(formData.egfr),
       dds_1: parseFloat(formData.dds_1),
       dds_3: parseFloat(formData.dds_3),
-      avg_fvg_1_2: (parseFloat(formData.fvg_1) + parseFloat(formData.fvg_2)) / 2,
-      fvg_delta_1_2: parseFloat(formData.fvg_2) - parseFloat(formData.fvg_1),
-      reduction_a: parseFloat(formData.hba1c1) - parseFloat(formData.hba1c2),
-      reduction_a_per_day: (parseFloat(formData.hba1c1) - parseFloat(formData.hba1c2)) / 90,
       first_visit_date: formData.first_visit_date,
       second_visit_date: formData.second_visit_date,
-      third_visit_date: formData.third_visit_date,
+      third_visit_date: formData.third_visit_date
 
     };
 

@@ -55,6 +55,7 @@ class PatientController extends Controller
             'first_visit_date' => $validated['first_visit_date'] ?? null,
             'second_visit_date' => $validated['second_visit_date'] ?? null,
             'third_visit_date' => $validated['third_visit_date'] ?? null,
+            'user_id' => $request->has('user_id') ? $request->input('user_id') : null, // 👈 Only assign if explicitly sent
         ]);
 
         // Calculate derived fields
@@ -176,4 +177,16 @@ class PatientController extends Controller
 
         return response()->json($patient);
     }
+
+    public function getByUserId($user_id)
+{
+    $patient = Patient::where('user_id', $user_id)->first();
+
+    if (!$patient) {
+        return response()->json(['message' => 'No linked patient'], 404);
+    }
+
+    return response()->json($patient);
+}
+
 }

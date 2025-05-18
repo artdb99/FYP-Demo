@@ -1,102 +1,144 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import { useUser } from './UserContext'; // 1. import context
 
 function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { user, logout } = useUser(); // 2. get role from context
+
 
   const isActive = (path) => location.pathname === path;
+
+  if (!user) return <div className="p-6">Please sign in.</div>; // fallback
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`flex-shrink-0 h-full overflow-y-auto bg-white shadow-lg transition-all duration-300 ${
-          collapsed ? 'w-16' : 'w-64'
-        }`}
-      >
-        <div className="flex items-center justify-between px-4 py-3">
-          {!collapsed && <h2 className="text-lg font-bold">Dashboard</h2>}
-          <button onClick={() => setCollapsed(!collapsed)} className="text-xl">
+        className={`flex flex-col h-full overflow-y-auto transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'
+          } bg-gradient-to-b from-indigo-500 to-purple-700 text-white shadow-xl`}>
+        <div className="flex items-center justify-between px-4 py-4 border-b border-white/20">
+          {!collapsed && (
+            <h2 className="text-lg font-bold">
+              {user.role === 'doctor' ? "Doctor's Dashboard" : "Patient Portal"}
+            </h2>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="text-black text-xl focus:outline-none"
+          >
             ☰
           </button>
         </div>
 
-        <nav className="px-4 space-y-6 text-sm">
-          {!collapsed && <h3 className="text-gray-600 font-semibold">Patients</h3>}
-          <ul className="space-y-2">
-            <li>
-              <Link
-                to="/patients"
-                className={`block px-3 py-2 rounded transition ${
-                  isActive('/patients')
-                    ? 'bg-blue-100 text-blue-600 font-semibold'
-                    : 'text-gray-700 hover:bg-blue-50'
-                }`}
-              >
-                {collapsed ? '📋' : 'List of Patients'}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/patients/create"
-                className={`block px-3 py-2 rounded transition ${
-                  isActive('/patients/create')
-                    ? 'bg-blue-100 text-blue-600 font-semibold'
-                    : 'text-gray-700 hover:bg-blue-50'
-                }`}
-              >
-                {collapsed ? '➕' : 'Create Patient'}
-              </Link>
-            </li>
-          </ul>
+        <nav className="flex flex-col items-center space-y-4 pt-4">
+          {/* Doctor Sidebar */}
+          {user.role === 'doctor' && (
+            <>
+              {!collapsed && <h3 className="text-white/70 text-xs font-bold uppercase">Patients</h3>}
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    to="/patients"
+                    className={`block px-3 py-2 rounded transition ${isActive('/patients')
+                      ? 'bg-white text-purple-700 font-bold'
+                      : 'text-white/90 hover:bg-white/10'
+                      }`}
+                  >
+                    {collapsed ? '📋' : 'List of Patients'}
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/patients/create"
+                    className={`block px-3 py-2 rounded transition ${isActive('/patients/create')
+                      ? 'bg-white text-purple-700 font-bold'
+                      : 'text-white/90 hover:bg-white/20'
+                      }`}
+                  >
+                    {collapsed ? '➕' : 'Create Patient'}
+                  </Link>
+                </li>
+              </ul>
 
-          {!collapsed && <h3 className="text-gray-600 font-semibold mt-6">Functions</h3>}
-          <ul className="space-y-2">
-            <li>
-              <Link
-                to="/predict"
-                className={`block px-3 py-2 rounded transition ${
-                  isActive('/predict')
-                    ? 'bg-blue-100 text-blue-600 font-semibold'
-                    : 'text-gray-700 hover:bg-blue-50'
-                }`}
-              >
-                {collapsed ? '🧠' : 'Predict HBA1C'}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/therapy-effectiveness"
-                className={`block px-3 py-2 rounded transition ${
-                  isActive('/therapy-effectiveness')
-                    ? 'bg-blue-100 text-blue-600 font-semibold'
-                    : 'text-gray-700 hover:bg-blue-50'
-                }`}
-              >
-                {collapsed ? '💊' : 'Therapy Effectiveness'}
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/treatment-recommendation"
-                className={`block px-3 py-2 rounded transition ${
-                  isActive('/treatment-recommendation')
-                    ? 'bg-blue-100 text-blue-600 font-semibold'
-                    : 'text-gray-700 hover:bg-blue-50'
-                }`}
-              >
-                {collapsed ? '📑' : 'Treatment Recommendation'}
-              </Link>
-            </li>
-          </ul>
+              {!collapsed && (
+                <h3 className="text-white/70 text-xs font-bold uppercase">Functions</h3>
+              )}
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    to="/predict"
+                    className={`block w-full text-center px-3 py-2 rounded transition ${isActive('/predict')
+                      ? 'bg-white text-purple-700 font-bold'
+                      : 'text-white/90 hover:bg-white/20'
+                      }`}
+                  >
+                    {collapsed ? '🧠' : 'Predict HBA1C'}
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/therapy-effectiveness"
+                    className={`block w-full text-center px-3 py-2 rounded transition ${isActive('/therapy-effectiveness')
+                      ? 'bg-white text-purple-700 font-bold'
+                      : 'text-white/90 hover:bg-white/20'
+                      }`}
+                  >
+                    {collapsed ? '💊' : 'Therapy Effectiveness'}
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/treatment-recommendation"
+                    className={`block w-full text-center px-3 py-2 rounded transition ${isActive('/treatment-recommendation')
+                      ? 'bg-white text-purple-700 font-bold'
+                      : 'text-white/90 hover:bg-white/20'
+                      }`}
+                  >
+                    {collapsed ? '📑' : 'Treatment Recommendation'}
+                  </Link>
+                </li>
+              </ul>
+            </>
+          )}
+
+          {/* Patient Sidebar */}
+          {user.role === 'patient' && (
+            <>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    to="/profile"
+                    className={`block px-3 py-2 rounded transition ${isActive('/profile')
+                      ? 'bg-white text-purple-700 font-bold'
+                      : 'text-white/90 hover:bg-white/10'
+                      }`}
+                  >
+                    {collapsed ? '👤' : 'My Profile'}
+                  </Link>
+
+                </li>
+
+              </ul>
+            </>
+          )}
         </nav>
+
+        <div className="mt-auto p-4 border-t border-white/20 w-full">
+          <button
+            onClick={logout}
+            className="block w-full text-center px-3 py-2 rounded transition text-white/90 hover:bg-white/10 appearance-none bg-transparent"
+          >
+            {collapsed ? '🚪' : 'Log Out'}
+          </button>
+        </div>
+
       </aside>
 
       {/* Main Content */}
-      <div className="flex flex-col flex-1 h-full overflow-auto">
-
-        <main className="flex-1 w-full px-6 py-8 overflow-auto">{children}</main>
+      <div className="flex flex-col flex-1 h-full overflow-auto bg-gray-50">
+        <main className="flex-1 w-full px-6 py-8">{children}</main>
       </div>
     </div>
   );
