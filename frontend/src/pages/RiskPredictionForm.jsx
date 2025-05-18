@@ -33,7 +33,7 @@ function RiskPredictionForm() {
           return;
         }
 
-        const predictionRes = await axios.post('http://localhost:8001/predict', {
+        const predictionRes = await axios.post('http://localhost:5000/predict', {
           features: features
         });
 

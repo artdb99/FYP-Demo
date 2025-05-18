@@ -120,6 +120,18 @@ function Layout({ children }) {
 
                 </li>
 
+                <li>
+                  <Link
+                    to="/chatbot"
+                    className={`block px-3 py-2 rounded transition ${isActive('/chatbot')
+                      ? 'bg-white text-purple-700 font-bold'
+                      : 'text-white/90 hover:bg-white/10'
+                      }`}
+                  >
+                    {collapsed ? '🤖' : 'Chat with Bot'}
+                  </Link>
+                </li>
+
               </ul>
             </>
           )}

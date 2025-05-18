@@ -6,6 +6,7 @@ import SignIn from './pages/SignIn.jsx';
 import RegistrationForm from './pages/RegistrationForm.jsx';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
+import Chatbot from './pages/Chatbot';
 import PatientsList from './pages/PatientsList';
 import PatientProfile from './pages/PatientProfile';
 import UpdatePatient from './pages/UpdatePatient';
@@ -64,6 +65,8 @@ function App() {
               element={user?.role === 'patient' ? <UpdatePatient /> : <Navigate to="/" />}
             />
             <Route path="/patient/:id/*" element={<PatientProfile />} />
+            <Route path="/chatbot" element={<Chatbot />} />
+
 
             {user.role === 'doctor' && (
               <>
