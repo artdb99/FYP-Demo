@@ -23,6 +23,14 @@ model = joblib.load("ridge_best_model.pkl")  # change to your model path
 class PredictionRequest(BaseModel):
     features: list[float]
 
+class TreatmentRequest(BaseModel):
+    patient: dict
+    question: str
+
+class PatientChatRequest(BaseModel):
+    patient: dict
+    query: str
+
 @app.post("/predict")
 def predict(req: PredictionRequest):
     print("Received:", req.features)  # 👈 Add this
@@ -36,3 +44,31 @@ async def rag_query(request: Request):
     query = body["query"]
     response_text = generate_rag_response(query)
     return {"response": response_text}
+
+@app.post("/treatment-recommendation")
+async def treatment_recommendation(request: TreatmentRequest):
+    patient_data = "\n".join([f"{k}: {v}" for k, v in request.patient.items()])
+    query = f"Patient data:\n{patient_data}\n\nQuestion: {request.question}"
+    response_text = generate_rag_response(query)
+    return {"response": response_text}
+
+@app.post("/chatbot-patient-query")
+async def chatbot_patient_query(req: PatientChatRequest):
+    patient_data = "\n".join([f"{k}: {v}" for k, v in req.patient.items()])
+    prompt = f"""
+You are a medical AI assistant. Given the patient's data and their question, generate a helpful and personalized response.
+
+Patient Info:
+{patient_data}
+
+User Question: {req.query}
+
+Instructions:
+- Use markdown headers like ## Recommendations or ## Monitoring Tips if multiple points need clarity.
+- For short or direct questions, reply naturally without forcing a structure.
+- Do not fabricate data. Base all suggestions on the context and user's question.
+"""
+
+    response = generate_rag_response(prompt)
+    return {"response": response}
+

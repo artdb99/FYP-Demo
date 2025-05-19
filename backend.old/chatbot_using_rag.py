@@ -5,7 +5,7 @@ from pinecone import Pinecone
 import os
 
 # Initialize Pinecone and embedder (do this only once)
-pc = Pinecone(api_key="pcsk_4i6sSn_J3hRYQKzpAuBodu6seQrQxodik9PUeK31qtckscrtptSvgSGsx8kVvwmzo55kof")
+pc = Pinecone(api_key="pcsk_QANfb_5A8zXiFcpvrm5Tz5J11EnQY48eap3vv5ARQ4mRzwm6zFaqrZheCuN2FY6f81rVw")
 index = pc.Index("medicalbooks")
 embedder = SentenceTransformer("BAAI/bge-large-en")
 
