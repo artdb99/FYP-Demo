@@ -10,7 +10,7 @@ const TherapyEffectivenessForm = () => {
   const [effectivenessResult, setEffectivenessResult] = useState(null);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/patients/${id}`)
+    fetch(`${process.env.REACT_APP_API_LARAVEL}/patients/${id}`)
       .then(res => res.json())
       .then(data => setPatient(data))
       .catch(err => console.error('Error:', err));
@@ -20,24 +20,28 @@ const TherapyEffectivenessForm = () => {
     if (patient) {
       const payload = {
         insulin_regimen: patient.insulin_regimen_type,
-        HbA1c1: patient.hba1c_1st_visit,
-        HbA1c2: patient.hba1c_2nd_visit,
-        HbA1c3: patient.hba1c_3rd_visit,
-        HbA1c_Delta_1_2: patient.reduction_a,
+        hba1c1: patient.hba1c_1st_visit,
+        hba1c2: patient.hba1c_2nd_visit,
+        hba1c3: patient.hba1c_3rd_visit,
+        hba1c_delta_1_2: patient.reduction_a,
         gap_initial_visit: patient.gap_from_initial_visit,
         gap_first_clinical: patient.gap_from_first_clinical_visit,
-        eGFR: patient.egfr,
+        egfr: patient.egfr,
         reduction_percent: patient.reduction_a,
-        FVG1: patient.fvg_1,
-        FVG2: patient.fvg_2,
-        FVG3: patient.fvg_3,
-        FVG_Delta_1_2: patient.fvg_delta_1_2,
-        DDS1: patient.dds_1,
-        DDS3: patient.dds_3,
-        DDS_Trend_1_3: patient.dds_trend_1_3,
+        fvg1: patient.fvg_1,
+        fvg2: patient.fvg_2,
+        fvg3: patient.fvg_3,
+        fvg_delta_1_2: patient.fvg_delta_1_2,
+        dds1: patient.dds_1,
+        dds3: patient.dds_3,
+        dds_trend_1_3: patient.dds_trend_1_3,
       };
 
-      fetch("http://127.0.0.1:8000/predict-therapy", {
+
+      console.log("Sending payload to /predict-therapy:", JSON.stringify(payload, null, 2));
+
+
+      fetch("http://127.0.0.1:5000/predict-therapy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

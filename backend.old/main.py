@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi import HTTPException
+import pandas as pd
 from pydantic import BaseModel
 from fastapi import Request
 from chatbot_using_rag import generate_rag_response  
@@ -30,6 +32,24 @@ class TreatmentRequest(BaseModel):
 class PatientChatRequest(BaseModel):
     patient: dict
     query: str
+
+class PatientData(BaseModel):
+    insulin_regimen: str
+    hba1c1: float
+    hba1c2: float
+    hba1c3: float
+    hba1c_delta_1_2: float
+    gap_initial_visit: float
+    gap_first_clinical: float
+    egfr: float
+    reduction_percent: float
+    fvg1: float
+    fvg2: float
+    fvg3: float
+    fvg_delta_1_2: float
+    dds1: float
+    dds3: float
+    dds_trend_1_3: float
 
 @app.post("/predict")
 def predict(req: PredictionRequest):
@@ -71,4 +91,34 @@ Instructions:
 
     response = generate_rag_response(prompt)
     return {"response": response}
+
+@app.post("/predict-therapy")
+def predict(data: PatientData):
+    try:
+        print("🔎 Received payload:", data)
+        input_df = pd.DataFrame([{
+            'INSULIN REGIMEN': data.insulin_regimen,
+            'HbA1c1': data.hba1c1,
+            'HbA1c2': data.hba1c2,
+            'HbA1c3': data.hba1c3,
+            'HbA1c_Delta_1_2': data.hba1c_delta_1_2,
+            'Gap from initial visit (days)': data.gap_initial_visit,
+            'Gap from first clinical visit (days)': data.gap_first_clinical,
+            'eGFR': data.egfr,
+            'Reduction (%)': data.reduction_percent,
+            'FVG1': data.fvg1,
+            'FVG2': data.fvg2,
+            'FVG3': data.fvg3,
+            'FVG_Delta_1_2': data.fvg_delta_1_2,
+            'DDS1': data.dds1,
+            'DDS3': data.dds3,
+            'DDS_Trend_1_3': data.dds_trend_1_3
+        }])
+
+        prob = model.predict_proba(input_df)[0][1]
+        return {"probability": round(prob, 2), "status": "Effective" if prob >= 0.5 else "Ineffective"}
+    except Exception as e:
+        print("❌ Exception:", e)
+        raise HTTPException(status_code=400, detail=str(e))
+
 

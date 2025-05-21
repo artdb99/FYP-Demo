@@ -35,7 +35,7 @@ const SignIn = () => {
   return (
     <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600">
       <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg mx-4">
-        <h2 className="text-3xl font-bold text-center text-purple-700 mb-1">Welcome back</h2>
+        <h2 className="text-3xl font-bold text-center text-purple-700 mb-1">Welcome Back</h2>
         <p className="text-center text-gray-500 text-sm mb-6">Sign in to your account</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

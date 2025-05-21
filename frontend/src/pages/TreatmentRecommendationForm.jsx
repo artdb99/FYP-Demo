@@ -97,7 +97,7 @@ Keep responses medically sound and readable.`
             </div>
             <div className="h-3" />
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-600 border-opacity-50"></div>
-          </section>
+          </section> 
         ) : (
           aiResponse.split(/##\s+/).slice(1).map((section, index) => {
           const [title, ...content] = section.split('\n');
