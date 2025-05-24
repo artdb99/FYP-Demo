@@ -2,15 +2,22 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Chart from 'chart.js/auto';
 
+
+
 const TherapyEffectivenessForm = () => {
   const { id } = useParams();
   const [patient, setPatient] = useState(null);
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
-  const [effectivenessResult, setEffectivenessResult] = useState(null);
+  const pathlineChartRef = useRef(null);
+  const pathlineChartInstanceRef = useRef(null);
+  const [therapyPathline, setTherapyPathline] = useState([]);
+  const [llmInsight, setLlmInsight] = useState('');
+  const [topFactors, setTopFactors] = useState([]);
+
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_API_LARAVEL}/patients/${id}`)
+    fetch(`http://localhost:8000/api/patients/${id}`)
       .then(res => res.json())
       .then(data => setPatient(data))
       .catch(err => console.error('Error:', err));
@@ -19,35 +26,35 @@ const TherapyEffectivenessForm = () => {
   useEffect(() => {
     if (patient) {
       const payload = {
-        insulin_regimen: patient.insulin_regimen_type,
-        hba1c1: patient.hba1c_1st_visit,
-        hba1c2: patient.hba1c_2nd_visit,
-        hba1c3: patient.hba1c_3rd_visit,
-        hba1c_delta_1_2: patient.reduction_a,
-        gap_initial_visit: patient.gap_from_initial_visit,
-        gap_first_clinical: patient.gap_from_first_clinical_visit,
-        egfr: patient.egfr,
-        reduction_percent: patient.reduction_a,
-        fvg1: patient.fvg_1,
-        fvg2: patient.fvg_2,
-        fvg3: patient.fvg_3,
-        fvg_delta_1_2: patient.fvg_delta_1_2,
-        dds1: patient.dds_1,
-        dds3: patient.dds_3,
-        dds_trend_1_3: patient.dds_trend_1_3,
+        insulin_regimen: String(patient.insulin_regimen_type || ''),
+        hba1c1: Number(patient.hba1c_1st_visit),
+        hba1c2: Number(patient.hba1c_2nd_visit),
+        hba1c3: Number(patient.hba1c_3rd_visit),
+        hba1c_delta_1_2: Number(patient.reduction_a),
+        gap_initial_visit: Number(patient.gap_from_initial_visit),
+        gap_first_clinical: Number(patient.gap_from_first_clinical_visit),
+        egfr: Number(patient.egfr),
+        reduction_percent: Number(patient.reduction_a),
+        fvg1: Number(patient.fvg_1),
+        fvg2: Number(patient.fvg_2),
+        fvg3: Number(patient.fvg_3),
+        fvg_delta_1_2: Number(patient.fvg_delta_1_2),
+        dds1: Number(patient.dds_1),
+        dds3: Number(patient.dds_3),
+        dds_trend_1_3: Number(patient.dds_trend_1_3),
       };
 
-
-      console.log("Sending payload to /predict-therapy:", JSON.stringify(payload, null, 2));
-
-
-      fetch("http://127.0.0.1:5000/predict-therapy", {
+      fetch("http://127.0.0.1:5000/predict-therapy-pathline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
         .then(res => res.json())
-        .then(data => setEffectivenessResult(data))
+        .then(data => {
+          setTherapyPathline(data.probabilities);
+          setLlmInsight(data.insight);
+          setTopFactors(data.top_factors);
+        })
         .catch(err => console.error("Prediction error:", err));
     }
   }, [patient]);
@@ -96,6 +103,43 @@ const TherapyEffectivenessForm = () => {
     }
   }, [patient]);
 
+  useEffect(() => {
+    if (therapyPathline.length === 3 && pathlineChartRef.current) {
+      if (pathlineChartInstanceRef.current) {
+        pathlineChartInstanceRef.current.destroy();
+      }
+
+      pathlineChartInstanceRef.current = new Chart(pathlineChartRef.current, {
+        type: 'line',
+        data: {
+          labels: ['Visit 1', 'Visit 2', 'Visit 3'],
+          datasets: [{
+            label: 'Therapy Effectiveness Probability',
+            data: therapyPathline,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59,130,246,0.1)',
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              min: 0,
+              max: 1,
+              title: {
+                display: true,
+                text: 'Probability'
+              }
+            }
+          }
+        }
+      });
+    }
+  }, [therapyPathline]);
+
+
   if (!patient) return <div className="p-6 text-center">Loading patient data...</div>;
 
   const hba1cLevel = patient.hba1c_1st_visit;
@@ -131,8 +175,16 @@ const TherapyEffectivenessForm = () => {
     recommendationText = '✅ Patient is on track. Continue current therapy and reassess quarterly.';
   }
 
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+      <div className="bg-white border border-blue-200 rounded-xl p-6 shadow mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">{patient.name}</h2>
+        <p className="text-sm text-gray-600 mt-1">
+          {patient.age} y/o — {patient.gender} · Therapy Effectiveness Summary
+        </p>
+      </div>
+      
       {/* Metric Cards */}
       <div className="grid md:grid-cols-4 gap-4">
         <MetricCard title="HbA1c Δ (1→2)" value={`${patient.reduction_a_per_day} %`} color="indigo" />
@@ -141,24 +193,70 @@ const TherapyEffectivenessForm = () => {
         <MetricCard title="DDS Δ (1→3)" value={`${patient.dds_trend_1_3}`} color="purple" />
       </div>
 
-      {/* Prediction Result */}
-      {effectivenessResult && (
-        <div className="bg-green-50 border border-green-200 p-4 rounded-xl shadow text-green-800">
-          <h4 className="text-md font-semibold mb-2">🎯 Therapy Effectiveness Model</h4>
-          <p className="text-sm">
-            Prediction: <strong>{effectivenessResult.status}</strong> (
-            {Math.round(effectivenessResult.probability * 100)}% confidence)
-          </p>
+      {/* Therapy Effectiveness Pathline Chart */}
+      {therapyPathline.length === 3 && (
+        <div className="bg-white p-6 rounded-xl shadow">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Therapy Effectiveness Trend</h3>
+          <canvas ref={pathlineChartRef}></canvas>
         </div>
       )}
 
-      {/* Chart */}
+      {/* Pathline Text Summary */}
+      {therapyPathline.length === 3 && (
+        <div className="bg-white border border-gray-200 p-6 rounded-xl shadow space-y-4">
+          <h4 className="text-md font-semibold text-gray-800">📈 Therapy Effectiveness Probabilities</h4>
+          <ul className="text-sm text-gray-700 space-y-1">
+            {therapyPathline.map((p, i) => (
+              <li key={i}>Visit {i + 1}: <strong>{(p * 100).toFixed(1)}%</strong></li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* LLM Insight */}
+      {llmInsight && (
+        <div className="bg-gray-50 border border-gray-300 p-6 rounded-xl shadow text-sm text-gray-800 whitespace-pre-line">
+          <h4 className="font-semibold text-md mb-2">🧠 LLM-Based Insight</h4>
+          {llmInsight}
+        </div>
+      )}
+
+      {topFactors.length > 0 && (
+        <div className="bg-white border border-indigo-200 p-6 rounded-xl shadow-md space-y-4">
+          <h4 className="text-md font-semibold text-indigo-700 flex items-center gap-2">
+            <span>🔍</span> Top Contributing Features
+          </h4>
+          <p className="text-sm text-gray-600">
+            These features had the most influence on the therapy effectiveness prediction across all patients.
+          </p>
+          <ul className="space-y-2 text-sm">
+            {topFactors.map((item, index) => {
+              const cleanLabel = item.feature.replace(/^remainder_/, '');
+              let color = "bg-gray-100 text-gray-800";
+              if (item.importance >= 0.3) color = "bg-red-100 text-red-700";
+              else if (item.importance >= 0.1) color = "bg-yellow-100 text-yellow-800";
+              else if (item.importance >= 0.05) color = "bg-blue-100 text-blue-700";
+
+              return (
+                <li key={index} className="flex justify-between items-center">
+                  <span className="font-medium">{cleanLabel}</span>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded ${color}`}>
+                    {item.importance}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* HbA1c/FVG Chart */}
       <div className="bg-white p-6 rounded-xl shadow">
         <h3 className="text-sm font-semibold text-gray-700 mb-4">Therapy Trends</h3>
         <canvas ref={chartRef}></canvas>
       </div>
 
-      {/* Patient Overview + Gaps */}
+      {/* Patient Overview */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-gray-50 p-4 rounded shadow">
           <h4 className="text-sm font-semibold text-gray-800 mb-2">Patient Overview</h4>
@@ -175,7 +273,7 @@ const TherapyEffectivenessForm = () => {
         </div>
       </div>
 
-      {/* Risk & Adherence Summary */}
+      {/* Risk Summary */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-red-50 border border-red-200 p-6 rounded-xl shadow">
           <h4 className="text-lg font-semibold text-red-700 mb-2">Risk Assessment</h4>
@@ -204,7 +302,7 @@ const TherapyEffectivenessForm = () => {
         </div>
       </div>
 
-      {/* Recommendation */}
+      {/* Recommendation Summary */}
       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
         <h5 className="text-sm font-semibold text-yellow-700 mb-2">Recommendation</h5>
         <p className="text-sm text-yellow-800 whitespace-pre-line">{recommendationText}</p>

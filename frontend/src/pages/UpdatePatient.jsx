@@ -108,7 +108,7 @@ const UpdatePatient = () => {
         <Input label="Full Name" name="name" value={formData.name} onChange={handleChange} />
         <Input label="Age" name="age" type="number" value={formData.age} onChange={handleChange} />
         <Select label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={["Male", "Female", "Other"]} />
-        <Select label="Insulin Regimen Type" name="insulinType" value={formData.insulinType} onChange={handleChange} options={["Basal", "Bolus", "Premixed", "Basal-Bolus", "None"]} />
+        <Select label="Insulin Regimen Type" name="insulinType" value={formData.insulinType} onChange={handleChange} options={["BB", "PTDS", "PBD"]} />
         <Textarea label="Medical History" name="medicalHistory" value={formData.medicalHistory} onChange={handleChange} />
         <Textarea label="Medications" name="medications" value={formData.medications} onChange={handleChange} />
         <Textarea label="Remarks" name="remarks" value={formData.remarks} onChange={handleChange} />

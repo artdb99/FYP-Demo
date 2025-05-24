@@ -70,9 +70,11 @@ const CreatePatient = () => {
   };
 
   return (
-    <div className="main-content px-6 py-12 max-w-6xl mx-auto">
-      <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Patient Management System</h1>
-      <p className="text-center text-gray-500 mb-10">Create and manage patient records with comprehensive clinical data</p>
+    <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="bg-indigo-500 text-white rounded-lg p-6 mb-8">
+      <h2 className="text-xl font-bold">Create Patient</h2>
+      <p className="text-sm text-blue-100">Manage patient records and clinical details</p>
+    </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
 
@@ -83,7 +85,7 @@ const CreatePatient = () => {
             <Input label="Full Name" name="name" value={formData.name} onChange={handleChange} placeholder="Enter patient’s full name" />
             <Input label="Age" name="age" type="number" value={formData.age} onChange={handleChange} placeholder="Enter age" />
             <Select label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={["Male", "Female", "Other"]} />
-            <Select label="Insulin Regimen Type" name="insulinType" value={formData.insulinType} onChange={handleChange} options={["Basal", "Bolus", "Premixed", "Basal-Bolus", "None"]} />
+            <Select label="Insulin Regimen Type" name="insulinType" value={formData.insulinType} onChange={handleChange} options={["BB", "PTDS", "PBD"]} />
           </div>
         </section>
 

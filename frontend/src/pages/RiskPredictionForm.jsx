@@ -22,10 +22,9 @@ function RiskPredictionForm() {
           parseFloat(data.fvg_1),
           parseFloat(data.fvg_2),
           parseFloat(data.avg_fvg_1_2),
-          parseFloat(data.reduction_a),
-          parseFloat(data.reduction_a_per_day),
-          parseFloat(data.fvg_delta_1_2)
+          parseFloat(data.reduction_a)
         ];
+
 
         if (features.some(val => isNaN(val))) {
           setError('Invalid or missing input data.');

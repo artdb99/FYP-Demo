@@ -38,16 +38,21 @@ const PatientsList = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-800">Patient List</h2>
-          <p className="text-sm text-gray-500">Monitor all patient clinical indicators and treatment progress</p>
-        </div>
-        <Link to="/patients/create" className="bg-blue-600 text-white font-semibold px-5 py-2 rounded hover:bg-blue-700 transition">
-          + Add Patient
-        </Link>
+      {/* Styled Header to match Dashboard.jsx */}
+  <header className="bg-indigo-500 text-white py-4 px-6 rounded-lg shadow-md mb-6">
+    <div className="flex justify-between items-center">
+      <div>
+        <h1 className="text-xl font-bold">Patient Management</h1>
+        <p className="text-sm">Monitor clinical progress and therapy effectiveness</p>
       </div>
+      <Link
+        to="/patients/create"
+        className="bg-white text-blue-600 font-semibold px-5 py-2 rounded hover:bg-blue-100 transition"
+      >
+        + Add Patient
+      </Link>
+    </div>
+  </header>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">

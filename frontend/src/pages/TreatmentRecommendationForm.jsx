@@ -61,10 +61,33 @@ Keep responses medically sound and readable.`
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
       {/* Header */}
-      <section>
-        <h1 className="text-3xl font-bold text-gray-900">🧠 AI Treatment Recommendation</h1>
-        <p className="text-gray-600 mt-1">This report was generated using your latest health indicators.</p>
-      </section>
+      <div className="bg-indigo-100 border-l-4 border-indigo-500 p-4 rounded-lg shadow-sm mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+          <div>
+            <h1 className="text-xl font-bold text-indigo-800">{patient.name}</h1>
+            <p className="text-sm text-gray-700">
+              {patient.age} y/o — {patient.gender}
+            </p>
+          </div>
+          <div className="mt-2 md:mt-0">
+            <span className={`px-3 py-1 text-xs font-medium rounded-full border ${patient.reduction_a < -0.5
+                ? 'bg-green-100 text-green-800 border-green-300'
+                : patient.reduction_a > 0.5
+                  ? 'bg-red-100 text-red-800 border-red-300'
+                  : 'bg-yellow-100 text-yellow-800 border-yellow-300'
+              }`}>
+              {patient.reduction_a < -0.5
+                ? 'Improving'
+                : patient.reduction_a > 0.5
+                  ? 'Worsening'
+                  : 'Stable'}
+            </span>
+          </div>
+        </div>
+        <p className="text-sm text-indigo-600 mt-2">AI-based treatment insights below</p>
+      </div>
+
+
 
       {/* Patient Overview */}
       <section className="grid md:grid-cols-2 gap-6">
@@ -89,17 +112,17 @@ Keep responses medically sound and readable.`
         <StatBox label="Current Medications" value={patient.medications || 'N/A'} />
       </section>
 
-        {loading ? (
-          <section className="flex flex-col justify-center items-center h-40">
-            <div className="animate-pulse text-blue-600 text-sm text-center">
-          <div className="text-lg font-medium">Generating treatment report...</div>
-          <div className="mt-2">⏳ Please wait while our AI analyzes the patient's data</div>
-            </div>
-            <div className="h-3" />
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-600 border-opacity-50"></div>
-          </section> 
-        ) : (
-          aiResponse.split(/##\s+/).slice(1).map((section, index) => {
+      {loading ? (
+        <section className="flex flex-col justify-center items-center h-40">
+          <div className="animate-pulse text-blue-600 text-sm text-center">
+            <div className="text-lg font-medium">Generating treatment report...</div>
+            <div className="mt-2">⏳ Please wait while our AI analyzes the patient's data</div>
+          </div>
+          <div className="h-3" />
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-blue-600 border-opacity-50"></div>
+        </section>
+      ) : (
+        aiResponse.split(/##\s+/).slice(1).map((section, index) => {
           const [title, ...content] = section.split('\n');
           return (
             <section key={index} className="bg-white border border-blue-200 shadow rounded-xl p-6">

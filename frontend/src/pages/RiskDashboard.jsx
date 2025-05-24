@@ -22,15 +22,14 @@ const RiskDashboard = () => {
         const results = {};
         for (const patient of data) {
             const features = [
-                parseFloat(patient.hba1c_2nd_visit),  // ✅ correct variable
                 parseFloat(patient.hba1c_1st_visit),
+                parseFloat(patient.hba1c_2nd_visit),
                 parseFloat(patient.fvg_1),
                 parseFloat(patient.fvg_2),
                 parseFloat(patient.avg_fvg_1_2),
-                parseFloat(patient.reduction_a),
-                parseFloat(patient.reduction_a_per_day),
-                parseFloat(patient.fvg_delta_1_2)
+                parseFloat(patient.reduction_a)
             ];
+
 
 
             // ✅ Log the values you're sending to the model
@@ -81,15 +80,15 @@ const RiskDashboard = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-            <div className="flex justify-between items-center flex-wrap gap-4">
+            <div className="bg-indigo-500 text-white rounded-lg p-6 mb-8 flex justify-between items-center flex-wrap gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Risk Prediction Dashboard</h1>
-                    <p className="text-gray-600">Overview of patient risk levels based on prediction model</p>
+                    <h2 className="text-xl font-bold">Risk Prediction</h2>
+                    <p className="text-sm text-blue-100">Model-driven prediction of diabetes severity</p>
                 </div>
                 <input
                     type="text"
                     placeholder="Search patients..."
-                    className="px-4 py-2 border border-gray-300 rounded shadow-sm"
+                    className="px-4 py-2 border border-gray-300 rounded shadow-sm text-black"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />

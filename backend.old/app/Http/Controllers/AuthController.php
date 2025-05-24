@@ -20,6 +20,7 @@ class AuthController extends Controller
         'role' => 'required|in:doctor,patient,admin',
         'phone' => 'nullable|string',
         'dob' => 'nullable|date',
+        'gender' => 'required|string',
     ]);
 
     $user = User::create([
@@ -33,7 +34,7 @@ if ($validated['role'] === 'patient') {
     Patient::create([
         'name' => $validated['name'],
         'user_id' => $user->id,
-        'gender' => 'Not specified' // ← fixes the error
+        'gender' => $validated['gender']
     ]);
 }
 

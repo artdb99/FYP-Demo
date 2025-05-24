@@ -5,7 +5,7 @@ from pinecone import Pinecone
 import os
 
 # Initialize Pinecone and embedder (do this only once)
-pc = Pinecone(api_key="pcsk_QANfb_5A8zXiFcpvrm5Tz5J11EnQY48eap3vv5ARQ4mRzwm6zFaqrZheCuN2FY6f81rVw")
+pc = Pinecone(api_key="pcsk_5UMeti_URqGVi7gSoy9fSBa6mxnSFSQ5XfS8fjC5gtPzrbU97XhqypVypyYBDLhoH5w3BZ")
 index = pc.Index("medicalbooks")
 embedder = SentenceTransformer("BAAI/bge-large-en")
 
@@ -27,7 +27,7 @@ def generate_rag_response(user_query):
         prompt = f"Context:\n{context}\n\nUser Question: {user_query}\n\nAnswer:"
 
         client = OpenAI(
-            api_key= "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",
+            api_key= "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",
             base_url="https://api.groq.com/openai/v1"
         )
 

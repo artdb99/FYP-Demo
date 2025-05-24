@@ -19,7 +19,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Load the model
-model = joblib.load("ridge_best_model.pkl")  # change to your model path
+model = joblib.load("ridge_best_model_1.pkl")  # change to your model path
+# Load therapy effectiveness model
+therapy_pathline_model = joblib.load("therapy_effectiveness_model.pkl")
+
 
 # Define request body
 class PredictionRequest(BaseModel):
@@ -92,33 +95,80 @@ Instructions:
     response = generate_rag_response(prompt)
     return {"response": response}
 
-@app.post("/predict-therapy")
-def predict(data: PatientData):
+@app.post("/predict-therapy-pathline")
+def predict_therapy_pathline(data: PatientData):
     try:
-        print("🔎 Received payload:", data)
-        input_df = pd.DataFrame([{
-            'INSULIN REGIMEN': data.insulin_regimen,
-            'HbA1c1': data.hba1c1,
-            'HbA1c2': data.hba1c2,
-            'HbA1c3': data.hba1c3,
-            'HbA1c_Delta_1_2': data.hba1c_delta_1_2,
-            'Gap from initial visit (days)': data.gap_initial_visit,
-            'Gap from first clinical visit (days)': data.gap_first_clinical,
-            'eGFR': data.egfr,
-            'Reduction (%)': data.reduction_percent,
-            'FVG1': data.fvg1,
-            'FVG2': data.fvg2,
-            'FVG3': data.fvg3,
-            'FVG_Delta_1_2': data.fvg_delta_1_2,
-            'DDS1': data.dds1,
-            'DDS3': data.dds3,
-            'DDS_Trend_1_3': data.dds_trend_1_3
-        }])
+        patient_dict = {
+            'INSULIN REGIMEN': [data.insulin_regimen],
+            'HbA1c1': [data.hba1c1],
+            'HbA1c2': [data.hba1c2],
+            'HbA1c3': [data.hba1c3],
+            'HbA1c_Delta_1_2': [data.hba1c_delta_1_2],
+            'Gap from initial visit (days)': [data.gap_initial_visit],
+            'Gap from first clinical visit (days)': [data.gap_first_clinical],
+            'eGFR': [data.egfr],
+            'Reduction (%)': [data.reduction_percent],
+            'FVG1': [data.fvg1],
+            'FVG2': [data.fvg2],
+            'FVG3': [data.fvg3],
+            'FVG_Delta_1_2': [data.fvg_delta_1_2],
+            'DDS1': [data.dds1],
+            'DDS3': [data.dds3],
+            'DDS_Trend_1_3': [data.dds_trend_1_3],
+        }
 
-        prob = model.predict_proba(input_df)[0][1]
-        return {"probability": round(prob, 2), "status": "Effective" if prob >= 0.5 else "Ineffective"}
+        df = pd.DataFrame(patient_dict)
+
+        # Run prediction for each visit (modifying HbA1c1 field)
+        visits = [data.hba1c1, data.hba1c2, data.hba1c3]
+        probabilities = []
+
+        for val in visits:
+            df['HbA1c1'] = [val]
+            prob = therapy_pathline_model.predict_proba(df)[0][1]
+            probabilities.append(round(prob, 3))
+
+        # Build prompt and call Groq
+        import os
+        from groq import Groq
+
+        prob_text = "\n".join([f"Visit {i+1}: {p * 100:.1f}%" for i, p in enumerate(probabilities)])
+        prompt = (
+            f"The patient is undergoing the insulin regimen: {data.insulin_regimen}.\n"
+            f"The predicted therapy effectiveness probabilities over three visits are:\n{prob_text}\n\n"
+            f"Based on this information, provide personalized insights or advice regarding this patient's therapy effectiveness. "
+            f"Please keep your response concise and limit it to no more than 300 words."
+        )
+
+        client = Groq(api_key="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")
+        llm = client.chat.completions.create(
+            model="deepseek-r1-distill-llama-70b",
+            messages=[
+                {"role": "system", "content": "You are a helpful medical AI assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        full_reply = llm.choices[0].message.content
+        insight = full_reply.split("</think>")[-1].strip() if "</think>" in full_reply else full_reply.strip()
+
+        # Extract top 5 global feature importances
+        feature_names = therapy_pathline_model.named_steps['preprocessor'].get_feature_names_out()
+        importances = therapy_pathline_model.named_steps['classifier'].feature_importances_
+        sorted_features = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
+        top_factors = [{"feature": name, "importance": round(score, 4)} for name, score in sorted_features[:5]]
+
+        return {
+            "probabilities": probabilities,
+            "insight": insight,
+            "top_factors": top_factors
+        }
+
     except Exception as e:
-        print("❌ Exception:", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        print("❌ LLM Pathline Error:", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 

@@ -22,8 +22,12 @@ const TreatmentRecommendationDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+      <header className="bg-indigo-500 text-white py-4 px-6 rounded-lg shadow mb-6">
+        <h1 className="text-xl font-bold">Treatment Recommendation Hub</h1>
+        <p className="text-sm">Model-based suggestions for improving patient outcomes</p>
+      </header>
+
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Treatment Recommendation Dashboard</h2>
         <input
           type="text"
           placeholder="Search patient..."
