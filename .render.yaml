@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: laravel-backend
+    env: docker
+    plan: free
+    region: singapore
+    rootDir: backend
+    dockerfilePath: backend/Dockerfile
+    buildCommand: ""
+    startCommand: ""
