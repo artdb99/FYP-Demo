@@ -1,13 +1,13 @@
-# Stage 0: Composer
+# Stage 0: Use Composer to install PHP deps
 FROM composer:latest AS composer_stage
 
 # Stage 1: PHP with Apache
 FROM php:8.2-apache
 
-# Enable Apache rewrite module
+# Enable mod_rewrite for Laravel routing
 RUN a2enmod rewrite
 
-# Install system dependencies and PHP extensions
+# Install PHP extensions and system packages
 RUN apt-get update && apt-get install -y \
     zip unzip git curl libzip-dev libpng-dev libonig-dev libxml2-dev \
     && docker-php-ext-install pdo pdo_mysql zip
@@ -15,21 +15,22 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
+# Copy app files
 COPY . .
 
-# Copy composer from stage
+# Copy Composer from stage and install dependencies
 COPY --from=composer_stage /usr/bin/composer /usr/bin/composer
-
-# Install PHP dependencies
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# Set proper permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Fix Laravel permissions
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Apache document root to point to /public
+# Change Apache document root to /public
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# Expose default Apache port (Render will detect this)
+# Expose Apache's port
 EXPOSE 80
 
+# Start Apache
+CMD ["apache2-foreground"]
