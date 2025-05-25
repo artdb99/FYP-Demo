@@ -33,5 +33,3 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /e
 # Expose default Apache port (Render will detect this)
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"]
