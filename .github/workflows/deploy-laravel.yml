@@ -6,79 +6,89 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      # Checkout code
+      - uses: actions/checkout@v3
 
+      # Setup PHP
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, dom, fileinfo, mysql, pdo, tokenizer, xml
-          tools: composer:v2
+          extensions: mbstring, dom, fileinfo, mysql
+          tools: composer
 
-      - name: Install Laravel dependencies
-        run: |
-          cd backend
-          composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
-
+      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
+      # Install backend dependencies
+      - name: Install Laravel dependencies
+        run: |
+          cd backend
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      # Install frontend dependencies
       - name: Install frontend dependencies
         run: |
           cd frontend
           npm install
 
+      # Build frontend
       - name: Build frontend
         run: |
           cd frontend
-          npm ci  # Ensure deterministic install
           npm run build
-          ls -l dist/  # Debug: Verify dist/ contents
+          ls -l dist/  # Debug
 
+      # Copy frontend build to Laravel public folder
       - name: Copy frontend build to Laravel public folder
         run: |
+          cd backend/public
+          mv index.php ../index.php.tmp 2>/dev/null || true  # Preserve index.php
+          mv .htaccess ../.htaccess.tmp 2>/dev/null || true  # Preserve .htaccess
+          cd ../..
           rm -rf backend/public/*
-          cp -r frontend/dist/* backend/public/ || { echo "Copy failed"; exit 1; }  # Fail on error
-          ls -l backend/public/  # Debug: Verify files
+          cp -r frontend/dist/* backend/public/ || { echo "Copy failed"; exit 1; }
+          mv backend/index.php.tmp backend/public/index.php 2>/dev/null || true  # Restore index.php
+          mv backend/.htaccess.tmp backend/public/.htaccess 2>/dev/null || true  # Restore .htaccess
+          ls -l backend/public/  # Debug
 
+      # Configure Laravel environment
       - name: Configure Laravel environment
         run: |
           cd backend
-          touch .env
           echo "APP_ENV=production" >> .env
-          echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+          echo "APP_URL=https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net" >> .env
           echo "DB_CONNECTION=mysql" >> .env
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
           echo "DB_PORT=3306" >> .env
           echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
           echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "FASTAPI_URL=${{ secrets.FASTAPI_URL }}" >> .env
+          echo "FASTAPI_URL=https://104384876fastapi-brbbdqb0g7b9hrb4.southeastasia-01.azurewebsites.net" >> .env
           echo "DB_SSL_CA=/home/site/wwwroot/storage/certs/DigiCertGlobalRootCA.crt.pem" >> .env
 
+      # Generate Laravel application key
       - name: Generate Laravel application key
         run: |
           cd backend
           php artisan key:generate --force
-          echo "APP_KEY=$(php artisan key:generate --show --force)" >> .env  # Append APP_KEY
-          
+          echo "APP_KEY=$(php artisan key:generate --show --force)" >> .env
+          cat .env  # Debug
 
-      - name: Optimize Laravel
-        run: |
-          cd backend
-          php artisan optimize
-
+      # Deploy to Azure App Service
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 104384876laravel
+          app-name: 104384876laravel-cwh4axg4d4h5f0ha
           slot-name: production
           publish-profile: ${{ secrets.AZURE_LARAVEL_PUBLISH_PROFILE }}
           package: ./backend
