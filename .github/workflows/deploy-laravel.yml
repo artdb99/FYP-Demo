@@ -71,10 +71,7 @@ jobs:
           cd backend
           php artisan key:generate --force
           echo "APP_KEY=$(php artisan key:generate --show --force)" >> .env  # Append APP_KEY
-          env:
-            COMPOSER_PROCESS_TIMEOUT: 0
-            COMPOSER_NO_INTERACTION: 1
-            COMPOSER_NO_AUDIT: 1
+          
 
       - name: Optimize Laravel
         run: |
