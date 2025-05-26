@@ -17,7 +17,9 @@ const TherapyEffectivenessForm = () => {
 
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/patients/${id}`)
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+    const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://127.0.0.1:5000";
+    fetch(`${laravelUrl}/api/patients/${id}`)
       .then(res => res.json())
       .then(data => setPatient(data))
       .catch(err => console.error('Error:', err));
@@ -44,7 +46,7 @@ const TherapyEffectivenessForm = () => {
         dds_trend_1_3: Number(patient.dds_trend_1_3),
       };
 
-      fetch("http://127.0.0.1:5000/predict-therapy-pathline", {
+      fetch(`${fastApiUrl}/predict-therapy-pathline`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

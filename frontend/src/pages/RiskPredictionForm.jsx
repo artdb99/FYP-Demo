@@ -12,7 +12,9 @@ function RiskPredictionForm() {
   useEffect(() => {
     async function fetchPatientAndPredict() {
       try {
-        const res = await axios.get(`http://localhost:8000/api/patients/${id}`);
+        const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+        const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://localhost:5000";
+        const res = await axios.get(`${laravelUrl}/api/patients/${id}`);
         const data = res.data;
         setPatientData(data);
 
@@ -32,7 +34,7 @@ function RiskPredictionForm() {
           return;
         }
 
-        const predictionRes = await axios.post('http://localhost:5000/predict', {
+        const predictionRes = await axios.post(`${fastApiUrl}/predict`, {
           features: features
         });
 

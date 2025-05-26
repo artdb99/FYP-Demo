@@ -35,10 +35,11 @@ public function predict(Request $request)
 
     \Log::info('Sending to FastAPI:', $dataForFastAPI); // Optional debug
 
+    $fastApiUrl = env('FASTAPI_URL', 'http://127.0.0.1:5000');
     $response = Http::timeout(10)
-        ->acceptJson()
-        ->asJson()
-        ->post('http://127.0.0.1:8001/predict', $dataForFastAPI);
+    ->acceptJson()
+    ->asJson()
+    ->post("$fastApiUrl/predict", $dataForFastAPI);
 
     if ($response->successful()) {
         return response()->json([

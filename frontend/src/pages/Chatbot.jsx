@@ -19,7 +19,8 @@ function Chatbot() {
     // Load patient data
     useEffect(() => {
         if (user?.id) {
-            fetch(`http://localhost:8000/api/patients/by-user/${user.id}`)
+            const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+            fetch(`${laravelUrl}/api/patients/by-user/${user.id}`)
                 .then(res => res.json())
                 .then(data => setPatient(data))
                 .catch(err => console.error("Failed to load patient data:", err));

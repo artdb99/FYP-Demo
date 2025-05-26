@@ -12,23 +12,29 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const response = await fetch('http://127.0.0.1:8000/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://127.0.0.1:8000";
+    try {
+      const response = await fetch(`${laravelUrl}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
 
-    const data = await response.json();
-    alert(data.message);
+      const data = await response.json();
+      alert(data.message);
 
-    if (response.ok) {
-      const { role, id, name } = data.user;
-      login({ role, id, name });
-      localStorage.setItem('isAuthenticated', 'true');
+      if (response.ok) {
+        const { role, id, name } = data.user;
+        login({ role, id, name });
+        localStorage.setItem('isAuthenticated', 'true');
 
-      if (role === 'doctor') navigate('/patients');
-      else if (role === 'patient') navigate('/profile');
-      else navigate('/');
+        if (role === 'doctor') navigate('/patients');
+        else if (role === 'patient') navigate('/profile');
+        else navigate('/');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      alert('Failed to sign in. The API might not be implemented yet.');
     }
   };
 

@@ -19,7 +19,8 @@ const PatientProfile = () => {
 
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/patients/${id}`)
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+    fetch(`${laravelUrl}/api/patients/${id}`)
       .then(res => res.json())
       .then(data => setPatient(data));
   }, [id]);

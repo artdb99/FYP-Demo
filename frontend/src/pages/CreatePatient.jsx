@@ -31,7 +31,7 @@ const CreatePatient = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const enrichedData = {
@@ -49,24 +49,23 @@ const CreatePatient = () => {
       first_visit_date: formData.first_visit_date,
       second_visit_date: formData.second_visit_date,
       third_visit_date: formData.third_visit_date
-
     };
 
-
-    fetch('http://localhost:8000/api/patients', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(enrichedData)
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
-        return res.json();
-      })
-      .then(() => alert('Patient created!'))
-      .catch((err) => {
-        console.error('Submission error:', err);
-        alert('Something went wrong.');
+    try {
+      const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+      const res = await fetch(`${laravelUrl}/api/patients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(enrichedData)
       });
+
+      if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+      await res.json();
+      alert('Patient created!');
+    } catch (err) {
+      console.error('Submission error:', err);
+      alert('Failed to create patient. The API might not be implemented yet.');
+    }
   };
 
   return (

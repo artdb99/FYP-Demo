@@ -19,9 +19,10 @@ class ChatbotController extends Controller
                 return response()->json(['response' => '❌ No question received.'], 400);
             }
 
-            $response = Http::post('http://127.0.0.1:5000/rag', [
-                'query' => $query
-            ]);
+            $fastApiUrl = env('FASTAPI_URL', 'http://127.0.0.1:5000');
+$response = Http::post("$fastApiUrl/rag", [
+    'query' => $query
+]);
 
             if ($response->successful()) {
                 return response()->json([

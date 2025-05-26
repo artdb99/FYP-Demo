@@ -30,7 +30,8 @@ function App() {
 
     useEffect(() => {
       if (user?.role === 'patient') {
-        fetch(`http://localhost:8000/api/patients/by-user/${user.id}`)
+        const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+        fetch(`${laravelUrl}/api/patients/by-user/${user.id}`)
           .then(res => res.json())
           .then(data => {
             if (data?.id) {

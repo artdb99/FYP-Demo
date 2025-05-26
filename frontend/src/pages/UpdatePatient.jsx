@@ -33,7 +33,8 @@ const UpdatePatient = () => {
   useEffect(() => {
     if (!user) return;
 
-    fetch(`http://localhost:8000/api/patients/by-user/${user.id}`)
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+    fetch(`${laravelUrl}/api/patients/by-user/${user.id}`)
       .then(res => res.json())
       .then(data => {
         setPatientId(data.id);
@@ -84,7 +85,8 @@ const UpdatePatient = () => {
     };
 
     try {
-      const res = await fetch(`http://localhost:8000/api/patients/${patientId}`, {
+      const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+      const res = await fetch(`${laravelUrl}/api/patients/${patientId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(enrichedData)

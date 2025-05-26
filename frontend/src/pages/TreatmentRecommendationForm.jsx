@@ -9,7 +9,8 @@ const TreatmentRecommendation = () => {
 
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/patients/${id}`)
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+    fetch(`${laravelUrl}/api/patients/${id}`)
       .then(res => res.json())
       .then(data => setPatient(data))
       .catch(err => console.error('Error fetching patient:', err));
@@ -20,7 +21,8 @@ const TreatmentRecommendation = () => {
       const fetchAIReport = async () => {
         try {
           setLoading(true);
-          const response = await fetch("http://localhost:5000/treatment-recommendation", {
+          const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://localhost:5000";
+          const response = await fetch(`${fastApiUrl}/treatment-recommendation`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

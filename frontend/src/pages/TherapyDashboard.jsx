@@ -17,7 +17,8 @@ const TherapyDashboard = () => {
   const [activeFilter, setActiveFilter] = useState('All');
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/patients')
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+    fetch(`${laravelUrl}/api/patients`)
       .then(res => res.json())
       .then(data => {
         setPatients(data);
