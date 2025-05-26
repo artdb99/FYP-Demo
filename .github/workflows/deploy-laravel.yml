@@ -41,12 +41,15 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
+          npm ci  # Ensure deterministic install
           npm run build
+          ls -l dist/  # Debug: Verify dist/ contents
 
       - name: Copy frontend build to Laravel public folder
         run: |
           rm -rf backend/public/*
-          cp -r frontend/dist/* backend/public/
+          cp -r frontend/dist/* backend/public/ || { echo "Copy failed"; exit 1; }  # Fail on error
+          ls -l backend/public/  # Debug: Verify files
 
       - name: Configure Laravel environment
         run: |
@@ -67,6 +70,11 @@ jobs:
         run: |
           cd backend
           php artisan key:generate --force
+          echo "APP_KEY=$(php artisan key:generate --show --force)" >> .env  # Append APP_KEY
+          env:
+            COMPOSER_PROCESS_TIMEOUT: 0
+            COMPOSER_NO_INTERACTION: 1
+            COMPOSER_NO_AUDIT: 1
 
       - name: Optimize Laravel
         run: |
