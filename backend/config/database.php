@@ -59,6 +59,7 @@ return [
             'engine' => null,
             'options' => [
         PDO::MYSQL_ATTR_SSL_CA => realpath(base_path(env('DB_SSL_CA', '/storage/certs/DigiCertGlobalRootCA.crt.pem'))),
+        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
     ],
         ],
 
