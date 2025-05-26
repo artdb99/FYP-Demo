@@ -61,6 +61,7 @@ jobs:
           echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "FASTAPI_URL=${{ secrets.FASTAPI_URL }}" >> .env
+          echo "DB_SSL_CA=/home/site/wwwroot/storage/certs/DigiCertGlobalRootCA.crt.pem" >> .env
 
       - name: Generate Laravel application key
         run: |
