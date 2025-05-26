@@ -1,0 +1,81 @@
+name: Deploy Laravel to Azure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, mysql, pdo, tokenizer, xml
+          tools: composer:v2
+
+      - name: Install Laravel dependencies
+        run: |
+          cd backend
+          composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Copy frontend build to Laravel public folder
+        run: |
+          rm -rf backend/public/*
+          cp -r frontend/dist/* backend/public/
+
+      - name: Configure Laravel environment
+        run: |
+          cd backend
+          touch .env
+          echo "APP_ENV=production" >> .env
+          echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "FASTAPI_URL=${{ secrets.FASTAPI_URL }}" >> .env
+
+      - name: Generate Laravel application key
+        run: |
+          cd backend
+          php artisan key:generate --force
+
+      - name: Optimize Laravel
+        run: |
+          cd backend
+          php artisan optimize
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 104384876laravel
+          slot-name: production
+          publish-profile: ${{ secrets.AZURE_LARAVEL_PUBLISH_PROFILE }}
+          package: ./backend
