@@ -1,13 +1,10 @@
 import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
-import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-    plugins: [
-        laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
-            refresh: true,
-        }),
-        tailwindcss(),
-    ],
+  plugins: [react()],
+  build: {
+    outDir: '../backend/public', // output straight into Laravel's public folder
+    emptyOutDir: true,           // clear old files before building
+  },
 });
