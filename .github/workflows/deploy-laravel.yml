@@ -88,7 +88,7 @@ jobs:
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 104384876laravel-cwh4axg4d4h5f0ha
+          app-name: 104384876laravel
           slot-name: production
           publish-profile: ${{ secrets.AZURE_LARAVEL_PUBLISH_PROFILE }}
           package: ./backend
