@@ -13,7 +13,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Use ["http://127.0.0.1"] if restricting
+    allow_origins=["https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net"],  # Use ["http://127.0.0.1"] if restricting
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
