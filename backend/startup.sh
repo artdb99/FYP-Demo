@@ -1,4 +1,5 @@
 #!/bin/bash
-echo "Setting document root to /home/site/wwwroot/public"
-sed -i 's|root /home/site/wwwroot;|root /home/site/wwwroot/public;|' /etc/nginx/sites-available/default
-systemctl restart nginx
+echo "Copying custom Nginx configuration"
+cp /home/site/wwwroot/nginx.conf /etc/nginx/sites-available/default
+echo "Reloading Nginx"
+nginx -s reload

@@ -81,9 +81,14 @@ jobs:
           chmod +x startup.sh
           echo "STARTUP_COMMAND=/home/site/wwwroot/startup.sh" >> .env
 
-      - name: Copy Nginx configuration
+      - name: Copy startup script
         run: |
-          cp backend/nginx.conf /home/site/wwwroot/nginx.conf
+          cp backend/startup.sh backend/startup.sh
+          chmod +x backend/startup.sh
+      - name: Copy Nginx configuration to backend directory
+        run: |
+          cp backend/nginx.conf backend/nginx.conf  # Ensure it's in backend/ for deployment
+          ls -l backend/nginx.conf || { echo "nginx.conf not found after copy"; exit 1; }
       # Deploy to Azure App Service
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v2
