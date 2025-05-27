@@ -63,6 +63,7 @@ jobs:
       - name: Configure Laravel environment
         run: |
           cd backend
+          echo "APP_NAME=Laravel" > .env
           echo "APP_ENV=production" >> .env
           echo "APP_URL=https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net" >> .env
           echo "DB_CONNECTION=mysql" >> .env
