@@ -41,8 +41,9 @@ jobs:
           cd frontend
           npm install
           npm run build
-          ls -l dist/
-          ls -l dist/assets/
+          ls -l dist/ || { echo "dist/ directory missing"; exit 1; }
+          ls -l dist/assets/ || { echo "dist/assets/ directory missing"; exit 1; }
+          cat dist/index.html || { echo "dist/index.html missing"; exit 1; }
 
       - name: Copy frontend build to Laravel public folder
         run: |
@@ -51,12 +52,18 @@ jobs:
           mv .htaccess ../.htaccess.tmp 2>/dev/null || true
           cd ../..
           rm -rf backend/public/*
-          cp -r frontend/dist/. backend/public/ || { echo "Copy failed"; exit 1; }  # Copy all contents, including index.html
+          cp -r frontend/dist/. backend/public/ || { echo "Copy failed"; exit 1; }
           mv backend/index.php.tmp backend/public/index.php 2>/dev/null || true
           mv backend/.htaccess.tmp backend/public/.htaccess 2>/dev/null || true
           ls -l backend/public/
           ls -l backend/public/assets/
+          cat backend/public/index.html || { echo "index.html missing after copy"; exit 1; }
 
+          - name: Debug deployment
+          run: |
+            ls -l backend/public/
+            ls -l backend/public/assets/
+            cat backend/public/index.html || echo "index.html missing after deployment prep"
       # Configure Laravel environment
       - name: Configure Laravel environment
         run: |
@@ -72,6 +79,12 @@ jobs:
           echo "FASTAPI_URL=https://104384876fastapi-brbbdqb0g7b9hrb4.southeastasia-01.azurewebsites.net" >> .env
           echo "DB_SSL_CA=/home/site/wwwroot/storage/certs/DigiCertGlobalRootCA.crt.pem" >> .env
           echo "APP_KEY=${{ secrets.APP_KEY }}" >> .env  # Use your existing key
+
+          - name: Configure document root
+          run: |
+            cd backend
+            chmod +x startup.sh
+            echo "STARTUP_COMMAND=/home/site/wwwroot/startup.sh" >> .env
 
       # Deploy to Azure App Service
       - name: Deploy to Azure App Service
