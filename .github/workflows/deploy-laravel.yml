@@ -74,7 +74,7 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "FASTAPI_URL=https://104384876fastapi-brbbdqb0g7b9hrb4.southeastasia-01.azurewebsites.net" >> .env
           echo "DB_SSL_CA=/home/site/wwwroot/storage/certs/DigiCertGlobalRootCA.crt.pem" >> .env
-          echo "APP_KEY=${{ secrets.APP_KEY }}" >> .env  # Use your existing key
+          echo "APP_KEY=${{ secrets.APP_KEY }}" >> .env  
 
       - name: Configure document root
         run: |
