@@ -81,10 +81,6 @@ jobs:
           chmod +x startup.sh
           echo "STARTUP_COMMAND=/home/site/wwwroot/startup.sh" >> .env
 
-      - name: Copy startup script
-        run: |
-          cp backend/startup.sh backend/startup.sh
-          chmod +x backend/startup.sh
       - name: Copy Nginx configuration to backend directory
         run: |
           cp backend/nginx.conf backend/nginx.conf  # Ensure it's in backend/ for deployment
