@@ -4,7 +4,11 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: '../backend/public/build', // Outputs build to backend.old/public/build
-    emptyOutDir: true, // Clears the directory before building
+    outDir: 'dist',  // Ensure output goes to dist/
+    rollupOptions: {
+      input: {
+        main: './src/main.jsx',  // Use root index.html as template
+      },
+    },
   },
 });
