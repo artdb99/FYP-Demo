@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'backend/fastapi/**'
+      - 'frontend/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
