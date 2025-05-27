@@ -81,6 +81,9 @@ jobs:
           chmod +x startup.sh
           echo "STARTUP_COMMAND=/home/site/wwwroot/startup.sh" >> .env
 
+      - name: Copy Nginx configuration
+        run: |
+          cp backend/nginx.conf /home/site/wwwroot/nginx.conf
       # Deploy to Azure App Service
       - name: Deploy to Azure App Service
         uses: azure/webapps-deploy@v2
