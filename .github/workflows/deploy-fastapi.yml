@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'backend/fastapi/**'
-      - 'frontend/**'
       - '.github/workflows/deploy-fastapi.yml'
   workflow_dispatch:
 
@@ -18,8 +17,8 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.13'
-    - name: Install dependencies locally  
+        python-version: '3.11'
+    - name: Install dependencies locally
       run: |
         cd backend/fastapi
         python -m pip install --upgrade pip
