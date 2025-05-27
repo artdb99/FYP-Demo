@@ -56,13 +56,7 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "FASTAPI_URL=https://104384876fastapi-brbbdqb0g7b9hrb4.southeastasia-01.azurewebsites.net" >> .env
           echo "DB_SSL_CA=/home/site/wwwroot/storage/certs/DigiCertGlobalRootCA.crt.pem" >> .env
-
-      # Generate Laravel application key
-      - name: Generate Laravel application key
-        run: |
-          cd backend
-          php artisan key:generate --force
-          echo "APP_KEY=$(php artisan key:generate --show --force)" >> .env
+          echo "APP_KEY=${{ secrets.APP_KEY }}" >> .env  # Use your existing key
 
       # Deploy to Azure App Service
       - name: Deploy to Azure App Service
