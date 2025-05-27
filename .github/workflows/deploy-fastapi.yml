@@ -19,7 +19,7 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.13'
-    - name: Install dependencies locally
+    - name: Install dependencies locally  
       run: |
         cd backend/fastapi
         python -m pip install --upgrade pip
