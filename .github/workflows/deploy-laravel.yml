@@ -36,11 +36,26 @@ jobs:
           composer install --no-interaction --prefer-dist --optimize-autoloader
 
       # Install frontend dependencies and build directly into backend/public
-      - name: Build frontend with Vite into Laravel public folder
+      - name: Build frontend
         run: |
           cd frontend
           npm install
           npm run build
+          ls -l dist/
+          ls -l dist/assets/
+
+      - name: Copy frontend build to Laravel public folder
+        run: |
+          cd backend/public
+          mv index.php ../index.php.tmp 2>/dev/null || true
+          mv .htaccess ../.htaccess.tmp 2>/dev/null || true
+          cd ../..
+          rm -rf backend/public/*
+          cp -r frontend/dist/* backend/public/ || { echo "Copy failed"; exit 1; }
+          mv backend/index.php.tmp backend/public/index.php 2>/dev/null || true
+          mv backend/.htaccess.tmp backend/public/.htaccess 2>/dev/null || true
+          ls -l backend/public/
+          ls -l backend/public/assets/
 
       # Configure Laravel environment
       - name: Configure Laravel environment
