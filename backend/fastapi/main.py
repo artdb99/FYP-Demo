@@ -13,7 +13,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Use ["http://127.0.0.1"] if restricting
+    allow_origins=["*", "https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net"],  # Use ["http://127.0.0.1"] if restricting
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,11 +69,22 @@ async def rag_query(request: Request):
     return {"response": response_text}
 
 @app.post("/treatment-recommendation")
-async def treatment_recommendation(request: TreatmentRequest):
-    patient_data = "\n".join([f"{k}: {v}" for k, v in request.patient.items()])
-    query = f"Patient data:\n{patient_data}\n\nQuestion: {request.question}"
-    response_text = generate_rag_response(query)
-    return {"response": response_text}
+async def treatment_recommendation(request: Request):
+    try:
+        body = await request.json()
+        patient = body["patient"]
+        question = body["question"]
+
+        patient_data = "\n".join([f"{k}: {v}" for k, v in patient.items()])
+        query = f"Patient data:\n{patient_data}\n\nQuestion: {question}"
+
+        print("🧠 Treatment prompt:\n", query)  # Add log
+
+        response_text = generate_rag_response(query)
+        return {"response": response_text}
+    except Exception as e:
+        print("❌ Treatment Recommendation Error:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chatbot-patient-query")
 async def chatbot_patient_query(req: PatientChatRequest):
@@ -136,7 +147,7 @@ def predict_therapy_pathline(data: PatientData):
         prompt = (
         f"The patient is undergoing the insulin regimen: {data.insulin_regimen}.\n"
         f"The predicted therapy effectiveness probabilities over three visits are:\n"
-        + "\n".join(prob_strings) +
+        f"{prob_text}\n\n"
         "\n\n"
         "Based on these probabilities, provide personalized insights or advice regarding this patient's therapy effectiveness.\n"
         "Additionally, justify the therapy effectiveness probabilities by analyzing the patient's HbA1c, FVG, and DDS score trends.\n"
