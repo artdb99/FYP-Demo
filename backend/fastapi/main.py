@@ -134,7 +134,7 @@ def predict_therapy_pathline(data: PatientData):
 
         prob_text = "\n".join([f"Visit {i+1}: {p * 100:.1f}%" for i, p in enumerate(probabilities)])
         prompt = (
-        f"The patient is undergoing the insulin regimen: {patient['INSULIN REGIMEN']}.\n"
+        f"The patient is undergoing the insulin regimen: {data.insulin_regimen}.\n"
         f"The predicted therapy effectiveness probabilities over three visits are:\n"
         + "\n".join(prob_strings) +
         "\n\n"
@@ -142,9 +142,9 @@ def predict_therapy_pathline(data: PatientData):
         "Additionally, justify the therapy effectiveness probabilities by analyzing the patient's HbA1c, FVG, and DDS score trends.\n"
         "For example, indicate if decreasing trends in these scores support the predicted effectiveness or if there are concerns.\n"
         "Use the following patient score values for your analysis:\n"
-        f"- HbA1c scores: {patient['HbA1c1']}, {patient['HbA1c2']}, {patient['HbA1c3']}\n"
-        f"- FVG scores: {patient['FVG1']}, {patient['FVG2']}, {patient['FVG3']}\n"
-        f"- DDS scores: {patient['DDS1']}, {patient['DDS3']}\n"
+        f"- HbA1c scores: {data.hba1c1}, {data.hba1c2}, {data.hba1c3}\n"
+        f"- FVG scores: {data.fvg1}, {data.fvg2}, {data.fvg3}\n"
+        f"- DDS scores: {data.dds1}, {data.dds3}\n"
         "Please keep your response concise and limit it to no more than 360 words."
     )
 
