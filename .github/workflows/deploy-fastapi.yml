@@ -7,6 +7,7 @@ on:
     paths:
       - 'backend/fastapi/**'
       - 'frontend/**'
+      - '.github/workflows/deploy-fastapi.yml'
   workflow_dispatch:
 
 jobs:

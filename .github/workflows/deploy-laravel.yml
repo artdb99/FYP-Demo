@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+    paths:
+      - 'backend/**'
+      - '!backend/fastapi/**'  # Exclude FastAPI directory
+      - '.github/workflows/deploy-laravel.yml'  # Include workflow file itself
+  workflow_dispatch:  # Keep manual trigger option
+
 
 jobs:
   build-and-deploy:
