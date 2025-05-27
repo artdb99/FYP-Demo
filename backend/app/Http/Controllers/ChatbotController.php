@@ -20,9 +20,9 @@ class ChatbotController extends Controller
             }
 
             $fastApiUrl = env('FASTAPI_URL', 'http://127.0.0.1:5000');
-$response = Http::post("$fastApiUrl/rag", [
-    'query' => $query
-]);
+            $response = Http::post("$fastApiUrl/rag", [
+                'query' => $query
+            ]);
 
             if ($response->successful()) {
                 return response()->json([
