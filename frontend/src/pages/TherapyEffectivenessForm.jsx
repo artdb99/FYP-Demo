@@ -18,7 +18,6 @@ const TherapyEffectivenessForm = () => {
 
   useEffect(() => {
     const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
-    const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://127.0.0.1:5000";
     fetch(`${laravelUrl}/api/patients/${id}`)
       .then(res => res.json())
       .then(data => setPatient(data))
@@ -27,6 +26,7 @@ const TherapyEffectivenessForm = () => {
 
   useEffect(() => {
     if (patient) {
+      const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://127.0.0.1:5000";
       const payload = {
         insulin_regimen: String(patient.insulin_regimen_type || ''),
         hba1c1: Number(patient.hba1c_1st_visit),

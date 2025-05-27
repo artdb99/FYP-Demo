@@ -41,7 +41,8 @@ const RiskDashboard = () => {
             }
 
             try {
-                const res = await axios.post('http://localhost:5000/predict', { features });
+                const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://127.0.0.1:5000";
+                const res = await axios.post(`${fastApiUrl}/predict`, { features });
                 const rawValue = parseFloat(res.data.prediction); // keep full precision for mapping
                 const value = rawValue.toFixed(2);                 // only format for display
                 const label = mapNumericRisk(rawValue);            // use unrounded for mapping

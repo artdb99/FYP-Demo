@@ -35,7 +35,8 @@ function Chatbot() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://127.0.0.1:5000/chatbot-patient-query', {
+            const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://127.0.0.1:5000";
+            const res = await fetch(`${fastApiUrl}/chatbot-patient-query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ patient, query: input })
