@@ -5,36 +5,33 @@ on:
     branches:
       - main
     paths:
-      - 'backend/**'
+      - 'backend/fastapi/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-
-      - name: Configure environment
-        run: |
-          cd backend
-          touch .env
-          echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
-
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: 104384876FastAPI
-          slot-name: production
-          publish-profile: ${{ secrets.AZURE_FASTAPI_PUBLISH_PROFILE }}
-          package: ./backend
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    - name: Install dependencies
+      run: |
+        cd backend/fastapi
+        pip install -r requirements.txt
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: '104384876FastAPI'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AZURE_FASTAPI_PUBLISH_PROFILE }}
+        package: './backend/fastapi'
+    - name: Set environment variables
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: '104384876FastAPI'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AZURE_FASTAPI_PUBLISH_PROFILE }}
+        command: |
+          az webapp config appsettings set --name 104384876FastAPI --resource-group fyp-group-14 --settings PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }} GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
