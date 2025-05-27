@@ -22,6 +22,13 @@ jobs:
       run: |
         cd backend/fastapi
         pip install -r requirements.txt
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Set environment variables
+      run: |
+        az webapp config appsettings set --name 104384876FastAPI --resource-group fyp-group-14 --settings PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }} GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v2
       with:
@@ -29,11 +36,3 @@ jobs:
         slot-name: 'production'
         publish-profile: ${{ secrets.AZURE_FASTAPI_PUBLISH_PROFILE }}
         package: './backend/fastapi'
-    - name: Set environment variables
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: '104384876FastAPI'
-        slot-name: 'production'
-        publish-profile: ${{ secrets.AZURE_FASTAPI_PUBLISH_PROFILE }}
-        command: |
-          az webapp config appsettings set --name 104384876FastAPI --resource-group fyp-group-14 --settings PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }} GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
