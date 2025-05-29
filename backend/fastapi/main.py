@@ -9,9 +9,6 @@ from pinecone import Pinecone
 from openai import OpenAI
 from groq import Groq
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
