@@ -206,6 +206,13 @@ const TherapyEffectivenessForm = () => {
     recommendationText = '✅ Patient is on track. Continue current therapy and reassess quarterly.';
   }
 
+  const parseMarkdown = (text) => {
+    return text
+      .replace(/^### (.*$)/gim, '<h3 class="text-md font-bold mt-4 mb-2">$1</h3>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  };
+
+
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
@@ -248,7 +255,13 @@ const TherapyEffectivenessForm = () => {
       {llmInsight && (
         <div className="bg-gray-50 border border-gray-300 p-6 rounded-xl shadow text-sm text-gray-800 whitespace-pre-line">
           <h4 className="font-semibold text-md mb-2">🧠 LLM-Based Insight</h4>
-          {llmInsight}
+          <div className="space-y-2 text-sm text-gray-800 leading-relaxed" dangerouslySetInnerHTML={{
+            __html: parseMarkdown(
+              llmInsight
+                .replace(/^-\s*/gm, '• ')  // optional: change dashes to bullet points
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // ensure bold
+            )
+          }} />
         </div>
       )}
 

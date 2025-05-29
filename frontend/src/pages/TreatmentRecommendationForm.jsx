@@ -17,7 +17,7 @@ const TreatmentRecommendation = () => {
   const { id } = useParams();
   const [patient, setPatient] = useState(null);
   const [aiResponse, setAiResponse] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [ragContext, setRagContext] = useState(""); // Add this to state
 
   useEffect(() => {
@@ -28,21 +28,17 @@ const TreatmentRecommendation = () => {
       .catch(err => console.error('Error fetching patient:', err));
   }, [id]);
 
-  useEffect(() => {
+  const generateReport = async () => {
     if (!patient) return;
-
-    let cancelled = false;
-
-    const fetchAIReport = async () => {
-      try {
-        setLoading(true);
-        const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://localhost:5000";
-        const response = await fetch(`${fastApiUrl}/treatment-recommendation`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            patient,
-            question: `
+    setLoading(true);
+    try {
+      const fastApiUrl = import.meta.env.VITE_FASTAPI_URL || "http://localhost:5000";
+      const response = await fetch(`${fastApiUrl}/treatment-recommendation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient,
+          question: `
 Please analyze the following diabetic patient's data and return a structured treatment report using markdown headers (##) with the following sections:
 
 ## Clinical Trend Analysis  
@@ -68,29 +64,27 @@ Instructions:
 - Medication Plan should mention specifics only if mentioned in the context (e.g., insulin type like PBD).
 - Lifestyle Advice must be short bullets (≤ 15 words per point).
 - Do not fabricate or generalize outside of context.
-
 `
-          })
-        });
+        })
+      });
+      const data = await response.json();
+      setAiResponse(data.response);
+      setRagContext(data.context || "");
+      localStorage.setItem(`report-${id}`, data.response);
+    } catch (err) {
+      setAiResponse("⚠️ Failed to retrieve AI-generated recommendation.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const data = await response.json();
-        if (!cancelled) {
-          setAiResponse(data.response);  // ✅ use data.response, not whole data
-        }
+  useEffect(() => {
+    const cached = localStorage.getItem(`report-${id}`);
+    if (cached) {
+      setAiResponse(cached);
+    }
+  }, [id]);
 
-      } catch (err) {
-        if (!cancelled) setAiResponse("⚠️ Failed to retrieve AI-generated recommendation.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    fetchAIReport();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [patient]);
 
   if (!patient) return <div className="p-6 text-center">Loading patient data...</div>;
 
@@ -131,15 +125,14 @@ Instructions:
             <p className="text-sm text-gray-700">{patient.age} y/o — {patient.gender}</p>
           </div>
           <div className="mt-2 md:mt-0">
-            <span className={`px-3 py-1 text-xs font-medium rounded-full border ${patient.reduction_a < -0.5
-              ? 'bg-green-100 text-green-800 border-green-300'
-              : patient.reduction_a > 0.5
-                ? 'bg-red-100 text-red-800 border-red-300'
-                : 'bg-yellow-100 text-yellow-800 border-yellow-300'
-              }`}>
-              {patient.reduction_a < -0.5 ? 'Improving' : patient.reduction_a > 0.5 ? 'Worsening' : 'Stable'}
-            </span>
-          </div>
+  <button
+    className="bg-indigo-200 text-indigo-800 text-xs px-3 py-1 rounded border border-indigo-300 hover:bg-indigo-300 transition"
+    onClick={generateReport}
+    disabled={loading}
+  >
+    {aiResponse ? "Regenerate Report" : "Generate Report"}
+  </button>
+</div>
         </div>
         <p className="text-sm text-indigo-600 mt-2">AI-based treatment insights below</p>
       </div>
@@ -166,7 +159,6 @@ Instructions:
         <StatBox label="Diabetes Distress Score" value={ddsTrend} note={ddsTrend <= 2 ? "Low" : ddsTrend <= 3 ? "Moderate" : "High"} />
         <StatBox label="Current Medications" value={patient.medications || 'N/A'} />
       </section>
-
 
       {/* AI Output */}
       {loading ? (

@@ -8,6 +8,10 @@ from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
 from openai import OpenAI
 from groq import Groq
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
@@ -26,8 +30,8 @@ model = joblib.load("ridge_best_model_1.pkl")
 therapy_pathline_model = joblib.load("therapy_effectiveness_model.pkl")
 
 # RAG setup
-pc = Pinecone(api_key="pcsk_5iGDob_Q8euf6ksbhL1awkCJhPHPzEx56Hh1xNtb14AYA94Etc2a6B2sxTDpJxp6iPy1TD")
-groq_client = Groq(api_key="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")
+pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 index = pc.Index("medicalbooks")
 embedder = SentenceTransformer("BAAI/bge-large-en")
 
@@ -38,7 +42,7 @@ def retrieve_context(query, top_k=3):
 
 def generate_rag_response(user_query, patient_context=""):
     try:
-        context_chunks = retrieve_context(user_query)
+        context_chunks = retrieve_context(user_query, top_k=2)
         all_context = f"Patient Info:\n{patient_context}\n\nMedical Book Context:\n" + "\n".join(context_chunks)
 
         prompt = f"""
@@ -193,8 +197,10 @@ def predict_therapy_pathline(data: PatientData):
         prob_text = "\n".join([f"Visit {i+1}: {p * 100:.1f}%" for i, p in enumerate(probabilities)])
         prompt = (
             f"The patient is undergoing the insulin regimen: {data.insulin_regimen}.\n"
-            f"The predicted therapy effectiveness probabilities over three visits are:\n{prob_text}\n\n"
-            "Based on these probabilities, provide personalized insights or advice regarding this patient's therapy effectiveness.\n"
+            "The predicted therapy effectiveness probabilities over three visits are:\n{prob_text}\n\n"
+            "Format insights using short bullet points and clear icons. Use **bold** for trend headers like HbA1c, FVG, DDS. Each bullet must not exceed 20 words. Structure like:\n"
+            "- 🔹 **HbA1c**: Short statement.\n- 🧪 **FVG**: Short statement.\n- 💬 **DDS**: Short statement.\n"
+            "Then give 2 next steps as ✅ bullets.\nKeep output brief and scannable."
             "Additionally, justify the therapy effectiveness probabilities by analyzing the patient's HbA1c, FVG, and DDS score trends.\n"
             f"- HbA1c scores: {data.hba1c1}, {data.hba1c2}, {data.hba1c3}\n"
             f"- FVG scores: {data.fvg1}, {data.fvg2}, {data.fvg3}\n"
