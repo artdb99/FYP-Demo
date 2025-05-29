@@ -19,6 +19,7 @@ const TreatmentRecommendation = () => {
   const [aiResponse, setAiResponse] = useState("");
   const [loading, setLoading] = useState(false);
   const [ragContext, setRagContext] = useState(""); // Add this to state
+  
 
   useEffect(() => {
     const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";

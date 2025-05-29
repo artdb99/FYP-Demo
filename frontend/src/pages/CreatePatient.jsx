@@ -71,9 +71,9 @@ const CreatePatient = () => {
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
       <div className="bg-indigo-500 text-white rounded-lg p-6 mb-8">
-      <h2 className="text-xl font-bold">Create Patient</h2>
-      <p className="text-sm text-blue-100">Manage patient records and clinical details</p>
-    </div>
+        <h2 className="text-xl font-bold">Create Patient</h2>
+        <p className="text-sm text-blue-100">Manage patient records and clinical details</p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
 
@@ -164,7 +164,7 @@ const Input = ({ label, name, value, onChange, placeholder, type = "text", class
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900 placeholder-gray-500"
     />
   </div>
 );
@@ -179,8 +179,8 @@ const Textarea = ({ label, name, value, onChange, placeholder, className = "" })
       onChange={onChange}
       placeholder={placeholder}
       rows="3"
-      className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-    ></textarea>
+      className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white text-gray-900 placeholder-gray-500"
+    />
   </div>
 );
 
@@ -192,7 +192,7 @@ const Select = ({ label, name, value, onChange, options = [], className = "" }) 
       name={name}
       value={value}
       onChange={onChange}
-      className="w-full border border-gray-300 rounded px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+      className="w-full border border-gray-300 rounded px-3 py-2 bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
     >
       <option value="">Select {label.toLowerCase()}</option>
       {options.map((opt) => (

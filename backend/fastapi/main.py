@@ -145,20 +145,30 @@ async def treatment_recommendation(request: Request):
 async def chatbot_patient_query(req: PatientChatRequest):
     patient_data = "\n".join([f"{k}: {v}" for k, v in req.patient.items()])
     prompt = f"""
-You are a medical AI assistant. Given the patient's data and their question, generate a helpful and personalized response.
+You are a clinical health assistant.
 
+Context:
 Patient Info:
 {patient_data}
 
-User Question: {req.query}
+User Question:
+{req.query}
 
 Instructions:
-- Use markdown headers like ## Recommendations or ## Monitoring Tips if multiple points need clarity.
-- For short or direct questions, reply naturally without forcing a structure.
-- Do not fabricate data. Base all suggestions on the context and user's question.
+- Answer directly and concisely based only on the patient's context.
+- Do not show reasoning steps like "let me think" or "first".
+- Do not explain your thought process or include <think> or internal monologue.
+- Do not state patient ID, use patient name instead.
+- Make notable key information that the AI had gathered from the medical book context that it was trained on.
+- Use markdown only for bold and bullet points, like:
+  - **HbA1c:** Slight improvement...
+  - **FVG:** High variability...
+- Keep responses friendly and clear, under 180 words.
 """
+
     response = generate_rag_response(prompt)
-    return {"response": response}
+    return {"response": response["response"]}
+
 
 @app.post("/predict-therapy-pathline")
 def predict_therapy_pathline(data: PatientData):

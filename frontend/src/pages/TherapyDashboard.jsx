@@ -89,14 +89,12 @@ const TherapyDashboard = () => {
         />
       </div>
 
-      <div className="flex gap-4 border-b text-sm mt-10 mb-2">
+      <div className="flex gap-4 border-b text-sm mt-10 mb-2 bg-white">
         {['All', 'Improved', 'Review', 'Stable'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveFilter(tab)}
-            className={`py-2 px-4 border-b-2 font-medium ${activeFilter === tab
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-gray-600 hover:text-blue-600'
+            className={`py-2 px-4 border-b-2 font-medium bg-white text-gray-800 hover:text-blue-600 ${activeFilter === tab ? 'border-blue-600 text-blue-600' : 'border-transparent'
               }`}
           >
             {tab}
@@ -109,7 +107,7 @@ const TherapyDashboard = () => {
         <input
           type="text"
           placeholder="Search patients..."
-          className="border p-2 rounded w-1/3"
+          className="border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-4 py-2 w-1/3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

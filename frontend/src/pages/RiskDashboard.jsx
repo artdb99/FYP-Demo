@@ -90,7 +90,7 @@ const RiskDashboard = () => {
                 <input
                     type="text"
                     placeholder="Search patients..."
-                    className="px-4 py-2 border border-gray-300 rounded shadow-sm text-black"
+                     className="px-4 py-2 border border-gray-300 rounded shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />

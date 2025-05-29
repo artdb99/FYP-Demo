@@ -82,7 +82,8 @@ const PatientProfile = () => {
   const ddsTrend = patient.dds_trend_1_3;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
+    <div className="max-w-7xl mx-auto px-6 py-10 space-y-10 bg-white text-gray-800">
+
       {/* Top Grid */}
       <div className="grid md:grid-cols-3 gap-6">
         {/* Profile Card */}
@@ -185,18 +186,6 @@ const PatientProfile = () => {
         </div>
       </div>
 
-      {/* Notes */}
-      <div className="bg-white rounded-xl shadow p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h4 className="text-gray-700 font-semibold">Notes & Recommendations</h4>
-          <button className="text-sm text-blue-600 hover:underline">+ Add Note</button>
-        </div>
-        <ul className="space-y-3 text-sm">
-          <NoteCard color="indigo" title="Treatment Adjustment" text="Increased basal insulin dose by 2 units. Fewer hypoglycemic events." />
-          <NoteCard color="green" title="Dietary Recommendation" text="Reduced carbohydrate intake. Meal planning recommended." />
-          <NoteCard color="yellow" title="Exercise Plan" text="30 mins of moderate activity daily. Includes stretching." />
-        </ul>
-      </div>
     </div>
   );
 };

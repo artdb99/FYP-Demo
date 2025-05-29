@@ -26,10 +26,11 @@ function Layout({ children }) {
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="text-black text-xl focus:outline-none"
+            className="text-purple-700 bg-white border border-white/40 rounded p-1 shadow hover:bg-purple-100 transition"
           >
             ☰
           </button>
+
         </div>
 
         <nav className="flex flex-col items-center space-y-4 pt-4">
