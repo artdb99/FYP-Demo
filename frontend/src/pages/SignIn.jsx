@@ -90,21 +90,6 @@ const SignIn = () => {
             Sign in
           </button>
 
-          <div className="flex items-center justify-center mt-6 text-sm text-gray-600">
-            <span>Or continue with</span>
-          </div>
-
-          <div className="flex justify-center gap-3 mt-3">
-            <button type="button" className="flex items-center gap-2 bg-white border border-gray-300 text-purple-600 px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 transition">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/0/0e/Google_2015_logo.svg" alt="Google" className="w-5 h-5" />
-              Google
-            </button>
-            <button type="button" className="flex items-center gap-2 bg-white border border-gray-300 text-purple-600 px-4 py-2 rounded-md shadow-sm hover:bg-gray-50 transition">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Facebook_icon.png" alt="Facebook" className="w-5 h-5" />
-              Facebook
-            </button>
-          </div>
-
           <p className="text-center text-sm mt-6 text-gray-700">
             Don’t have an account?{' '}
             <a href="/register" className="text-purple-600 hover:underline font-medium">Sign up</a>

@@ -1,30 +1,80 @@
-from fastapi import FastAPI
-from fastapi import HTTPException
-import pandas as pd
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
-from fastapi import Request
-from chatbot_using_rag import generate_rag_response  
+from fastapi.middleware.cors import CORSMiddleware
+import pandas as pd
 import numpy as np
 import joblib
-from fastapi.middleware.cors import CORSMiddleware
+from sentence_transformers import SentenceTransformer
+from pinecone import Pinecone
+from openai import OpenAI
+from groq import Groq
 
-
+# Initialize FastAPI
 app = FastAPI()
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net"],  # Use ["http://127.0.0.1"] if restricting
+    allow_origins=["*", "https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Load the model
-model = joblib.load("ridge_best_model_1.pkl")  # change to your model path
-# Load therapy effectiveness model
+
+# Load models
+model = joblib.load("ridge_best_model_1.pkl")
 therapy_pathline_model = joblib.load("therapy_effectiveness_model.pkl")
 
+# RAG setup
+pc = Pinecone(api_key="pcsk_5iGDob_Q8euf6ksbhL1awkCJhPHPzEx56Hh1xNtb14AYA94Etc2a6B2sxTDpJxp6iPy1TD")
+groq_client = Groq(api_key="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")
+index = pc.Index("medicalbooks")
+embedder = SentenceTransformer("BAAI/bge-large-en")
 
-# Define request body
+def retrieve_context(query, top_k=3):
+    query_vec = embedder.encode([query])[0].tolist()
+    results = index.query(vector=query_vec, top_k=top_k, include_metadata=True)
+    return [match["metadata"]["text"] for match in results["matches"]]
+
+def generate_rag_response(user_query, patient_context=""):
+    try:
+        context_chunks = retrieve_context(user_query)
+        all_context = f"Patient Info:\n{patient_context}\n\nMedical Book Context:\n" + "\n".join(context_chunks)
+
+        prompt = f"""
+You are a clinical AI. Only use the information in the provided context.
+
+Context:
+{all_context}
+
+User Question:
+{user_query}
+
+Instructions:
+- Do not guess or fabricate.
+- If context lacks a specific answer, say so.
+- Mention insulin regimen (e.g. PBD) only if clearly stated in the context.
+""".strip()
+
+        response = groq_client.chat.completions.create(
+            model="deepseek-r1-distill-llama-70b",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
+        )
+
+        return {
+            "response": response.choices[0].message.content,
+            "context_used": all_context
+        }
+
+    except Exception as e:
+        return {
+            "response": "❌ AI backend error: " + str(e),
+            "context_used": ""
+        }
+
+
+# Data models
 class PredictionRequest(BaseModel):
     features: list[float]
 
@@ -54,17 +104,16 @@ class PatientData(BaseModel):
     dds3: float
     dds_trend_1_3: float
 
+# Routes
 @app.post("/predict")
 def predict(req: PredictionRequest):
-    print("Received:", req.features)  # 👈 Add this
     input_data = np.array(req.features).reshape(1, -1)
     prediction = model.predict(input_data)
     return {"prediction": float(prediction[0])}
 
 @app.post("/rag")
 async def rag_query(request: Request):
-    body = await request.json()
-    query = body["query"]
+    query = (await request.json())["query"]
     response_text = generate_rag_response(query)
     return {"response": response_text}
 
@@ -75,16 +124,21 @@ async def treatment_recommendation(request: Request):
         patient = body["patient"]
         question = body["question"]
 
+        # Serialize patient data as context
         patient_data = "\n".join([f"{k}: {v}" for k, v in patient.items()])
-        query = f"Patient data:\n{patient_data}\n\nQuestion: {question}"
 
-        print("🧠 Treatment prompt:\n", query)  # Add log
+        # Use RAG-style structured prompt (pass patient context)
+        response = generate_rag_response(question, patient_context=patient_data)
 
-        response_text = generate_rag_response(query)
-        return {"response": response_text}
+        return {
+            "response": response["response"],
+            "context_used": response["context_used"]
+        }
+
     except Exception as e:
         print("❌ Treatment Recommendation Error:", e)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/chatbot-patient-query")
 async def chatbot_patient_query(req: PatientChatRequest):
@@ -102,7 +156,6 @@ Instructions:
 - For short or direct questions, reply naturally without forcing a structure.
 - Do not fabricate data. Base all suggestions on the context and user's question.
 """
-
     response = generate_rag_response(prompt)
     return {"response": response}
 
@@ -129,8 +182,6 @@ def predict_therapy_pathline(data: PatientData):
         }
 
         df = pd.DataFrame(patient_dict)
-
-        # Run prediction for each visit (modifying HbA1c1 field)
         visits = [data.hba1c1, data.hba1c2, data.hba1c3]
         probabilities = []
 
@@ -139,28 +190,19 @@ def predict_therapy_pathline(data: PatientData):
             prob = therapy_pathline_model.predict_proba(df)[0][1]
             probabilities.append(round(prob, 3))
 
-        # Build prompt and call Groq
-        import os
-        from groq import Groq
-
         prob_text = "\n".join([f"Visit {i+1}: {p * 100:.1f}%" for i, p in enumerate(probabilities)])
         prompt = (
-        f"The patient is undergoing the insulin regimen: {data.insulin_regimen}.\n"
-        f"The predicted therapy effectiveness probabilities over three visits are:\n"
-        f"{prob_text}\n\n"
-        "\n\n"
-        "Based on these probabilities, provide personalized insights or advice regarding this patient's therapy effectiveness.\n"
-        "Additionally, justify the therapy effectiveness probabilities by analyzing the patient's HbA1c, FVG, and DDS score trends.\n"
-        "For example, indicate if decreasing trends in these scores support the predicted effectiveness or if there are concerns.\n"
-        "Use the following patient score values for your analysis:\n"
-        f"- HbA1c scores: {data.hba1c1}, {data.hba1c2}, {data.hba1c3}\n"
-        f"- FVG scores: {data.fvg1}, {data.fvg2}, {data.fvg3}\n"
-        f"- DDS scores: {data.dds1}, {data.dds3}\n"
-        "Please keep your response concise and limit it to no more than 360 words."
-    )
+            f"The patient is undergoing the insulin regimen: {data.insulin_regimen}.\n"
+            f"The predicted therapy effectiveness probabilities over three visits are:\n{prob_text}\n\n"
+            "Based on these probabilities, provide personalized insights or advice regarding this patient's therapy effectiveness.\n"
+            "Additionally, justify the therapy effectiveness probabilities by analyzing the patient's HbA1c, FVG, and DDS score trends.\n"
+            f"- HbA1c scores: {data.hba1c1}, {data.hba1c2}, {data.hba1c3}\n"
+            f"- FVG scores: {data.fvg1}, {data.fvg2}, {data.fvg3}\n"
+            f"- DDS scores: {data.dds1}, {data.dds3}\n"
+            "Please keep your response concise and limit it to no more than 360 words."
+        )
 
-        client = Groq(api_key="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")
-        llm = client.chat.completions.create(
+        llm = groq_client.chat.completions.create(
             model="deepseek-r1-distill-llama-70b",
             messages=[
                 {"role": "system", "content": "You are a helpful medical AI assistant."},
@@ -171,7 +213,6 @@ def predict_therapy_pathline(data: PatientData):
         full_reply = llm.choices[0].message.content
         insight = full_reply.split("</think>")[-1].strip() if "</think>" in full_reply else full_reply.strip()
 
-        # Extract top 5 global feature importances
         feature_names = therapy_pathline_model.named_steps['preprocessor'].get_feature_names_out()
         importances = therapy_pathline_model.named_steps['classifier'].feature_importances_
         sorted_features = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
@@ -186,8 +227,3 @@ def predict_therapy_pathline(data: PatientData):
     except Exception as e:
         print("❌ LLM Pathline Error:", e)
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-

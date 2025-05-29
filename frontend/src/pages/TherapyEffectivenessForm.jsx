@@ -83,8 +83,17 @@ const TherapyEffectivenessForm = () => {
               borderColor: '#10b981',
               backgroundColor: 'rgba(16,185,129,0.2)',
               tension: 0.4
+            },
+            {
+              label: 'DDS Score',
+              data: [patient.dds_1, (patient.dds_1 + patient.dds_3) / 2, patient.dds_3],
+              borderColor: '#a855f7',
+              backgroundColor: 'rgba(216,180,254,0.2)',
+              tension: 0.4,
+              yAxisID: 'y1' // keep using the main axis
             }
           ]
+
         },
         options: {
           responsive: true,
@@ -96,10 +105,23 @@ const TherapyEffectivenessForm = () => {
               beginAtZero: false,
               title: {
                 display: true,
-                text: 'Clinical Values'
+                text: 'HbA1c & FVG'
+              },
+              position: 'left'
+            },
+            y1: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'DDS'
+              },
+              position: 'right',
+              grid: {
+                drawOnChartArea: false
               }
             }
           }
+
         }
       });
     }
@@ -111,6 +133,11 @@ const TherapyEffectivenessForm = () => {
         pathlineChartInstanceRef.current.destroy();
       }
 
+      // Get dynamic min/max with some padding
+      const minProb = Math.min(...therapyPathline);
+      const maxProb = Math.max(...therapyPathline);
+      const buffer = 0.01; // you can adjust this to exaggerate the change
+
       pathlineChartInstanceRef.current = new Chart(pathlineChartRef.current, {
         type: 'line',
         data: {
@@ -121,15 +148,17 @@ const TherapyEffectivenessForm = () => {
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59,130,246,0.1)',
             fill: true,
-            tension: 0.3
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7
           }]
         },
         options: {
           responsive: true,
           scales: {
             y: {
-              min: 0,
-              max: 1,
+              min: Math.max(0, minProb - buffer),
+              max: Math.min(1, maxProb + buffer),
               title: {
                 display: true,
                 text: 'Probability'
@@ -186,7 +215,7 @@ const TherapyEffectivenessForm = () => {
           {patient.age} y/o — {patient.gender} · Therapy Effectiveness Summary
         </p>
       </div>
-      
+
       {/* Metric Cards */}
       <div className="grid md:grid-cols-4 gap-4">
         <MetricCard title="HbA1c Δ (1→2)" value={`${patient.reduction_a_per_day} %`} color="indigo" />
@@ -223,35 +252,6 @@ const TherapyEffectivenessForm = () => {
         </div>
       )}
 
-      {topFactors.length > 0 && (
-        <div className="bg-white border border-indigo-200 p-6 rounded-xl shadow-md space-y-4">
-          <h4 className="text-md font-semibold text-indigo-700 flex items-center gap-2">
-            <span>🔍</span> Top Contributing Features
-          </h4>
-          <p className="text-sm text-gray-600">
-            These features had the most influence on the therapy effectiveness prediction across all patients.
-          </p>
-          <ul className="space-y-2 text-sm">
-            {topFactors.map((item, index) => {
-              const cleanLabel = item.feature.replace(/^remainder_/, '');
-              let color = "bg-gray-100 text-gray-800";
-              if (item.importance >= 0.3) color = "bg-red-100 text-red-700";
-              else if (item.importance >= 0.1) color = "bg-yellow-100 text-yellow-800";
-              else if (item.importance >= 0.05) color = "bg-blue-100 text-blue-700";
-
-              return (
-                <li key={index} className="flex justify-between items-center">
-                  <span className="font-medium">{cleanLabel}</span>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded ${color}`}>
-                    {item.importance}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
       {/* HbA1c/FVG Chart */}
       <div className="bg-white p-6 rounded-xl shadow">
         <h3 className="text-sm font-semibold text-gray-700 mb-4">Therapy Trends</h3>
@@ -272,35 +272,6 @@ const TherapyEffectivenessForm = () => {
         <div className="grid grid-cols-2 gap-4">
           <StatBox title="Gap (1→3)" value={`${patient.gap_from_initial_visit} days`} />
           <StatBox title="Gap (2→3)" value={`${patient.gap_from_first_clinical_visit} days`} />
-        </div>
-      </div>
-
-      {/* Risk Summary */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-red-50 border border-red-200 p-6 rounded-xl shadow">
-          <h4 className="text-lg font-semibold text-red-700 mb-2">Risk Assessment</h4>
-          <div className="space-y-2">
-            <RiskBar label="Hypoglycemia Risk" value={hypoRiskValue} color="bg-yellow-400" note={hypoRisk} />
-            <RiskBar label="Complication Risk" value={complicationRiskValue} color="bg-red-500" note={complicationRisk} />
-            <RiskBar label="Medication Adherence Risk" value={adherenceRiskValue} color="bg-green-500" note={medAdherenceRisk} />
-          </div>
-          <div className="mt-4 bg-red-100 text-red-700 text-sm p-3 rounded-lg flex items-start gap-2">
-            <span>⚠️</span>
-            <span>Patient has elevated risk for microvascular complications. Consider eye and kidney screening.</span>
-          </div>
-        </div>
-
-        <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl shadow">
-          <h4 className="text-lg font-semibold text-blue-700 mb-2">Adherence & Engagement</h4>
-          <div className="space-y-2">
-            <RiskBar label="Medication Adherence" value={95} color="bg-blue-600" />
-            <RiskBar label="Monitoring Adherence" value={85} color="bg-blue-500" />
-            <RiskBar label="Appointment Adherence" value={100} color="bg-blue-400" />
-          </div>
-          <div className="mt-4 bg-blue-100 text-blue-800 text-sm p-3 rounded-lg flex items-start gap-2">
-            <span>ℹ️</span>
-            <span>Patient shows excellent engagement. Consider digital tools for glucose monitoring.</span>
-          </div>
         </div>
       </div>
 
