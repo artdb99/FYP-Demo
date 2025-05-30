@@ -6,9 +6,12 @@ import numpy as np
 import joblib
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
-from openai import OpenAI
+import openai
 from groq import Groq
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
@@ -29,17 +32,40 @@ therapy_pathline_model = joblib.load("therapy_effectiveness_model.pkl")
 # RAG setup
 pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-index = pc.Index("medicalbooks")
-embedder = SentenceTransformer("BAAI/bge-large-en")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+index = pc.Index("medicalbooks-1536")
+
+def get_openai_embedding(text: str) -> list:
+    """Generate 1536-dim embedding using OpenAI Embedding API."""
+    try:
+        response = openai.embeddings.create(
+            model="text-embedding-3-small",
+            input=[text]
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        print("❌ OpenAI Embedding Error:", e)
+        raise
 
 def retrieve_context(query, top_k=3):
-    query_vec = embedder.encode([query])[0].tolist()
+    query_vec = get_openai_embedding(query)
     results = index.query(vector=query_vec, top_k=top_k, include_metadata=True)
-    return [match["metadata"]["text"] for match in results["matches"]]
+
+    context_chunks = []
+    for match in results.get("matches", []):
+        metadata = match.get("metadata", {})
+        if "text" in metadata:
+            context_chunks.append(metadata["text"])
+    
+    return context_chunks
+
 
 def generate_rag_response(user_query, patient_context=""):
     try:
-        context_chunks = retrieve_context(user_query, top_k=2)
+        context_chunks = retrieve_context(user_query)
+        print("[RAG] Retrieved context:", context_chunks)
+
         all_context = f"Patient Info:\n{patient_context}\n\nMedical Book Context:\n" + "\n".join(context_chunks)
 
         prompt = f"""
@@ -69,11 +95,11 @@ Instructions:
         }
 
     except Exception as e:
+        print("[RAG ERROR]", str(e))
         return {
             "response": "❌ AI backend error: " + str(e),
             "context_used": ""
         }
-
 
 # Data models
 class PredictionRequest(BaseModel):

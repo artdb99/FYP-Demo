@@ -288,11 +288,6 @@ const TherapyEffectivenessForm = () => {
         </div>
       </div>
 
-      {/* Recommendation Summary */}
-      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-        <h5 className="text-sm font-semibold text-yellow-700 mb-2">Recommendation</h5>
-        <p className="text-sm text-yellow-800 whitespace-pre-line">{recommendationText}</p>
-      </div>
     </div>
   );
 };
