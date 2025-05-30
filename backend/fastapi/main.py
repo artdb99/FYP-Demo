@@ -34,16 +34,18 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 index = pc.Index("medicalbooks-1536")
 
 def get_openai_embedding(text: str) -> list:
-    """Generate 1536-dim embedding using OpenAI Embedding API."""
     try:
+        print("🔍 Getting OpenAI embedding...")
         response = openai.embeddings.create(
             model="text-embedding-3-small",
             input=[text]
         )
+        print("✅ Embedding received.")
         return response.data[0].embedding
     except Exception as e:
         print("❌ OpenAI Embedding Error:", e)
         raise
+
 
 def retrieve_context(query, top_k=3):
     query_vec = get_openai_embedding(query)
