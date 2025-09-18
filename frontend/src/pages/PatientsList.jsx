@@ -17,7 +17,8 @@ const PatientsList = ({ hideHeader = false }) => {
   if (!window.confirm("Are you sure you want to delete this patient?")) return;
 
   try {
-    await fetch(`http://localhost:8000/api/admin/patients/${id}`, {
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+    await fetch(`${laravelUrl}/api/admin/patients/${id}`, {
       method: 'DELETE',
     });
 
@@ -30,7 +31,8 @@ const PatientsList = ({ hideHeader = false }) => {
 
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/patients')
+    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+    fetch(`${laravelUrl}/api/patients`)
       .then((res) => res.json())
       .then((data) => setPatients(data))
       .catch((err) => console.error('Error:', err));
