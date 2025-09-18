@@ -17,8 +17,13 @@ import TherapyDashboard from './pages/TherapyDashboard';
 import TherapyEffectivenessForm from './pages/TherapyEffectivenessForm';
 import TreatmentRecommendationDashboard from './pages/TreatmentRecommendationDashboard.jsx';
 import TreatmentRecommendationForm from './pages/TreatmentRecommendationForm';
+import AdminDashboard from './pages/AdminDashboard.jsx';
+import AdminPatients from './pages/AdminPatients.jsx';
+import SystemAnalytics from './pages/SystemAnalytics.jsx';
+
 
 import './App.css';
+import ManageUsers from './pages/ManageUsers.jsx';
 
 function App() {
   const { user } = useUser();
@@ -73,14 +78,25 @@ function App() {
               <>
                 <Route path="/patients" element={<PatientsList />} />
                 <Route path="/predict" element={<RiskDashboard />} />
+                <Route path="/patient/update/:id" element={<UpdatePatient />} />  
                 <Route path="/therapy-effectiveness" element={<TherapyDashboard />} />
                 <Route path="/predict/:id" element={<RiskPredictionForm />} />
                 <Route path="/therapy-effectiveness/:id" element={<TherapyEffectivenessForm />} />
                 <Route path="/treatment-recommendation" element={<TreatmentRecommendationDashboard />} />
                 <Route path="/treatment-recommendation/:id" element={<TreatmentRecommendationForm />} />
-                <Route path="/patients/create" element={<CreatePatient />} />
               </>
             )}
+
+            {user.role === 'admin' && (
+              <>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<ManageUsers />} />
+                <Route path="/admin/patients" element={<AdminPatients />} />
+                <Route path="/admin/patients/create" element={<CreatePatient />} />
+                <Route path="/admin/analytics" element={<SystemAnalytics />} />
+              </>
+            )}
+
           </Routes>
         </Layout>
       ) : (

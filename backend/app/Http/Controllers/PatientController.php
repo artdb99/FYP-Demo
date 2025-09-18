@@ -14,6 +14,9 @@ class PatientController extends Controller
             'name' => 'required|string',
             'age' => 'nullable|integer',
             'gender' => 'required|string',
+            'height_cm' => 'nullable|numeric|min:30|max:250',
+            'weight_kg' => 'nullable|numeric|min:10|max:400',
+            'physical_activity' => 'nullable|string',
             'medicalHistory' => 'nullable|string',
             'medications' => 'nullable|string',
             'remarks' => 'nullable|string',
@@ -38,6 +41,9 @@ class PatientController extends Controller
             'name' => $validated['name'],
             'age' => $validated['age'],
             'gender' => $validated['gender'],
+            'height_cm' => $validated['height_cm'] ?? null,
+            'weight_kg' => $validated['weight_kg'] ?? null,
+            'physical_activity' => $validated['physical_activity'] ?? null,
             'medical_history' => $validated['medicalHistory'],
             'medications' => $validated['medications'],
             'remarks' => $validated['remarks'],
@@ -91,6 +97,9 @@ class PatientController extends Controller
         'name' => 'required|string',
         'age' => 'nullable|integer',
         'gender' => 'required|string',
+        'height_cm' => 'nullable|numeric|min:30|max:250',
+        'weight_kg' => 'nullable|numeric|min:10|max:400',
+        'physical_activity' => 'nullable|string',
         'medicalHistory' => 'nullable|string',
         'medications' => 'nullable|string',
         'remarks' => 'nullable|string',
@@ -116,6 +125,9 @@ class PatientController extends Controller
     $patient->name = $validated['name'];
     $patient->age = $validated['age'];
     $patient->gender = $validated['gender'];
+    $patient->height_cm = $validated['height_cm'] ?? null;
+    $patient->weight_kg = $validated['weight_kg'] ?? null;
+    $patient->physical_activity = $validated['physical_activity'] ?? null;
     $patient->medical_history = $validated['medicalHistory'];
     $patient->medications = $validated['medications'];
     $patient->remarks = $validated['remarks'];
@@ -188,5 +200,20 @@ class PatientController extends Controller
 
     return response()->json($patient);
 }
+
+    public function destroy($id)
+{
+    $patient = Patient::findOrFail($id);
+
+    // If patient is linked to a user, delete user too
+    if ($patient->user_id) {
+        $patient->user()->delete();
+    }
+
+    $patient->delete();
+
+    return response()->json(['message' => 'Patient and linked user deleted']);
+}
+
 
 }

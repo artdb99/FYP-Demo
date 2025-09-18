@@ -20,9 +20,11 @@ function Layout({ children }) {
           } bg-gradient-to-b from-indigo-500 to-purple-700 text-white shadow-xl`}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/20">
           {!collapsed && (
-            <h2 className="text-lg font-bold">
-              {user.role === 'doctor' ? "Doctor's Dashboard" : "Patient Portal"}
-            </h2>
+            <div className="flex-1 flex justify-center">
+              <h2 className="text-lg font-bold">
+                {user.role === 'doctor' ? "Doctor's Dashboard" : user.role === 'patient' ? "Patient Portal" : "Admin Panel"}
+              </h2>
+            </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -50,17 +52,6 @@ function Layout({ children }) {
                     {collapsed ? '📋' : 'List of Patients'}
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    to="/patients/create"
-                    className={`block px-3 py-2 rounded transition ${isActive('/patients/create')
-                      ? 'bg-white text-purple-700 font-bold'
-                      : 'text-white/90 hover:bg-white/20'
-                      }`}
-                  >
-                    {collapsed ? '➕' : 'Create Patient'}
-                  </Link>
-                </li>
               </ul>
 
               {!collapsed && (
@@ -75,7 +66,7 @@ function Layout({ children }) {
                       : 'text-white/90 hover:bg-white/20'
                       }`}
                   >
-                    {collapsed ? '🧠' : 'Predict HBA1C'}
+                    {collapsed ? '🧠' : 'Risk Prediction'}
                   </Link>
                 </li>
                 <li>
@@ -135,6 +126,45 @@ function Layout({ children }) {
 
               </ul>
             </>
+          )}
+
+          {/* Admin Sidebar */}
+          {user.role === 'admin' && (
+            <ul className="space-y-4 mt-4">
+              <li>
+                <Link
+                  to="/admin/users"
+                  className={`block px-3 py-2 rounded transition text-center ${isActive('/admin/users')
+                    ? 'bg-white text-purple-700 font-bold'
+                    : 'text-white/90 hover:bg-white/20'
+                    }`}
+                >
+                  {collapsed ? '👥' : 'Manage Users'}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/admin/patients"
+                  className={`block px-3 py-2 rounded transition text-center ${isActive('/admin/patients')
+                    ? 'bg-white text-purple-700 font-bold'
+                    : 'text-white/90 hover:bg-white/20'
+                    }`}
+                >
+                  {collapsed ? '➕' : 'Manage Patients'}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/admin/analytics"
+                  className={`block px-3 py-2 rounded transition text-center ${isActive('/admin/analytics')
+                    ? 'bg-white text-purple-700 font-bold'
+                    : 'text-white/90 hover:bg-white/20'
+                    }`}
+                >
+                  {collapsed ? '📊' : 'System Analytics'}
+                </Link>
+              </li>
+            </ul>
           )}
         </nav>
 

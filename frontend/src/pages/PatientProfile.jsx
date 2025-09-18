@@ -17,6 +17,17 @@ const PatientProfile = () => {
       day: 'numeric'
     }) : 'N/A';
 
+  const activityMeta = (level) => {
+    switch (level) {
+      case '1–2 times per week': return { label: 'Light', pct: 30 };
+      case '3–4 times per week': return { label: 'Moderate', pct: 60 };
+      case '5–6 times per week': return { label: 'Active', pct: 85 };
+      case 'Daily': return { label: 'Very Active', pct: 100 };
+      default: return { label: 'Not set', pct: 0 };
+    }
+  };
+
+
 
   useEffect(() => {
     const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
@@ -81,6 +92,25 @@ const PatientProfile = () => {
   const fvgDelta = patient.fvg_delta_1_2;
   const ddsTrend = patient.dds_trend_1_3;
 
+  // Inside PatientProfile component, after fetching patient
+
+  // Add BMI calculation after patient is loaded
+  const bmi = patient?.weight_kg && patient?.height_cm
+    ? (patient.weight_kg / Math.pow(patient.height_cm / 100, 2)).toFixed(1)
+    : null;
+
+  const bmiCategory = bmi
+    ? bmi < 18.5
+      ? { label: 'Underweight', color: 'text-yellow-600' }
+      : bmi < 25
+        ? { label: 'Normal', color: 'text-green-600' }
+        : bmi < 30
+          ? { label: 'Overweight', color: 'text-orange-600' }
+          : { label: 'Obese', color: 'text-red-600' }
+    : { label: 'N/A', color: 'text-gray-400' };
+
+  const pa = activityMeta(patient.physical_activity);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-10 bg-white text-gray-800">
 
@@ -94,13 +124,14 @@ const PatientProfile = () => {
             alt="avatar"
           />
           <h2 className="text-xl font-bold text-gray-800">{patient.name}</h2>
-          {user?.role === 'patient' && parseInt(user.id) === patient.user_id && (
+
+          {(user?.role === 'doctor' || user?.role === 'admin') && (
             <div className="flex justify-center">
               <a
-                href="/profile/edit"
+                href={`/patient/update/${patient.id}`}
                 className="inline-block bg-indigo-600 text-white px-4 py-2 mt-2 rounded hover:bg-indigo-700 transition text-sm"
               >
-                ✏️ Edit My Profile
+                ✏️ Edit Patient
               </a>
             </div>
           )}
@@ -113,12 +144,14 @@ const PatientProfile = () => {
           <div className="text-left text-sm mt-4">
             <h4 className="text-gray-600 font-semibold mb-1">Personal Information</h4>
             <ul className="space-y-1 text-gray-700">
+              <li><strong>Height:</strong> {patient.height_cm ? `${patient.height_cm} cm` : 'N/A'}</li>
+              <li><strong>Weight:</strong> {patient.weight_kg ? `${patient.weight_kg} kg` : 'N/A'}</li>
               <li><strong>Insulin Regimen:</strong> {patient.insulin_regimen_type}</li>
               <li><strong>First Visit:</strong> {formatDate(patient.first_visit_date)}</li>
               <li><strong>Second Visit:</strong> {formatDate(patient.second_visit_date)}</li>
               <li><strong>Third Visit:</strong> {formatDate(patient.third_visit_date)}</li>
-
             </ul>
+
             <h4 className="mt-4 text-gray-600 font-semibold mb-1">Contact</h4>
             <p>📧 patient@example.com</p>
             <p>📞 (555) 123-4567</p>
@@ -136,6 +169,13 @@ const PatientProfile = () => {
             <StatCard title="Current HbA1c" value={`${patient.hba1c_3rd_visit}%`} change={`↓ ${hba1cDrop}%`} color="text-indigo-600" />
             <StatCard title="Current FVG" value={patient.fvg} change={`↑ ${fvgDelta} points`} color="text-green-600" />
             <StatCard title="DDS Trend" value={ddsTrend} change={`${ddsTrend > 0 ? '+' : ''}${ddsTrend} pts`} color="text-yellow-600" />
+            <StatCard title="BMI" value={bmi ? `${bmi} (${bmiCategory.label})` : 'N/A'} change="" color={bmiCategory.color} />
+            {/* Enhanced Activity Card */}
+            <div className="bg-white border rounded-lg p-4 shadow-sm text-center">
+              <div className="text-xs text-gray-500 font-medium">Activity</div>
+              <div className="text-xl font-bold text-blue-600">{pa.label}</div>
+              <div className="text-sm text-gray-600 mt-1">{patient.physical_activity}</div>
+            </div>
           </div>
 
           {/* Chart */}

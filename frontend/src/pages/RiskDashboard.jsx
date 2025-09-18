@@ -1,12 +1,64 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { Bar } from 'react-chartjs-2';
+import 'chart.js/auto';
 
 const RiskDashboard = () => {
     const [patients, setPatients] = useState([]);
     const [filtered, setFiltered] = useState([]);
     const [search, setSearch] = useState('');
     const [riskResults, setRiskResults] = useState({}); // { id: { value, label } }
+    const riskCounts = Object.values(riskResults).reduce((acc, r) => {
+        acc[r.label] = (acc[r.label] || 0) + 1;
+        return acc;
+    }, {});
+
+    const riskCategories = ['Normal', 'At Risk', 'Moderate Risk', 'Risky', 'Very Risky', 'Critical'];
+    const counts = riskCategories.map(cat => riskCounts[cat] || 0);
+
+    // Bar chart data
+    const chartData = {
+        labels: riskCategories,
+        datasets: [
+            {
+                label: 'Number of Patients',
+                data: counts,
+                backgroundColor: [
+                    '#22c55e', // Normal (green)
+                    '#facc15', // At Risk (yellow)
+                    '#fbbf24', // Moderate Risk (amber)
+                    '#fb923c', // Risky (orange)
+                    '#ef4444', // Very Risky (red)
+                    '#7f1d1d', // Critical (dark red)
+                ],
+            },
+        ],
+    };
+
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Patients',
+                    font: { weight: 'bold' },
+                },
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Risk Category',
+                    font: { weight: 'bold' },
+                },
+            },
+        },
+    };
 
     useEffect(() => {
         const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
@@ -90,11 +142,18 @@ const RiskDashboard = () => {
                 <input
                     type="text"
                     placeholder="Search patients..."
-                     className="px-4 py-2 border border-gray-300 rounded shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    className="px-4 py-2 border border-gray-300 rounded shadow-sm bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
             </div>
+
+            {/* Risk Distribution Bar Chart */}
+            <div className="bg-white shadow rounded-lg p-6 mb-8">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Risk Distribution</h3>
+                <Bar data={chartData} options={chartOptions} />
+            </div>
+
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filtered.map((p) => {

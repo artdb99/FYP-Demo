@@ -5,6 +5,9 @@ const CreatePatient = () => {
     name: '',
     age: '',
     gender: '',
+    height_cm: '',
+    weight_kg: '',
+    physical_activity: '',
     insulinType: '',
     medicalHistory: '',
     medications: '',
@@ -46,6 +49,8 @@ const CreatePatient = () => {
       egfr: parseFloat(formData.egfr),
       dds_1: parseFloat(formData.dds_1),
       dds_3: parseFloat(formData.dds_3),
+      height_cm: parseFloat(formData.height_cm),
+      weight_kg: parseFloat(formData.weight_kg),
       first_visit_date: formData.first_visit_date,
       second_visit_date: formData.second_visit_date,
       third_visit_date: formData.third_visit_date
@@ -85,6 +90,9 @@ const CreatePatient = () => {
             <Input label="Age" name="age" type="number" value={formData.age} onChange={handleChange} placeholder="Enter age" />
             <Select label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={["Male", "Female", "Other"]} />
             <Select label="Insulin Regimen Type" name="insulinType" value={formData.insulinType} onChange={handleChange} options={["BB", "PTDS", "PBD"]} />
+            <Input label="Height (cm)" name="height_cm" type="number" step="0.1" value={formData.height_cm} onChange={handleChange} placeholder="170.0" />
+            <Input label="Weight (kg)" name="weight_kg" type="number" step="0.1" value={formData.weight_kg} onChange={handleChange} placeholder="68.5" />
+            <Select label="Physical Activity" name="physical_activity" value={formData.physical_activity} onChange={handleChange} options={['1–2 times per week','3–4 times per week','5–6 times per week','Daily']} />
           </div>
         </section>
 

@@ -9,6 +9,9 @@ from pinecone import Pinecone
 import openai
 from groq import Groq
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI()
@@ -46,7 +49,6 @@ def get_openai_embedding(text: str) -> list:
         print("❌ OpenAI Embedding Error:", e)
         raise
 
-
 def retrieve_context(query, top_k=3):
     query_vec = get_openai_embedding(query)
     results = index.query(vector=query_vec, top_k=top_k, include_metadata=True)
@@ -58,7 +60,6 @@ def retrieve_context(query, top_k=3):
             context_chunks.append(metadata["text"])
     
     return context_chunks
-
 
 def generate_rag_response(user_query, patient_context=""):
     try:
@@ -229,15 +230,28 @@ def predict_therapy_pathline(data: PatientData):
         prob_text = "\n".join([f"Visit {i+1}: {p * 100:.1f}%" for i, p in enumerate(probabilities)])
         prompt = (
             f"The patient is undergoing the insulin regimen: {data.insulin_regimen}.\n"
-            "The predicted therapy effectiveness probabilities over three visits are:\n{prob_text}\n\n"
-            "Format insights using short bullet points and clear icons. Use **bold** for trend headers like HbA1c, FVG, DDS. Each bullet must not exceed 20 words. Structure like:\n"
-            "- 🔹 **HbA1c**: Short statement.\n- 🧪 **FVG**: Short statement.\n- 💬 **DDS**: Short statement.\n"
-            "Then give 2 next steps as ✅ bullets.\nKeep output brief and scannable."
-            "Additionally, justify the therapy effectiveness probabilities by analyzing the patient's HbA1c, FVG, and DDS score trends.\n"
-            f"- HbA1c scores: {data.hba1c1}, {data.hba1c2}, {data.hba1c3}\n"
-            f"- FVG scores: {data.fvg1}, {data.fvg2}, {data.fvg3}\n"
-            f"- DDS scores: {data.dds1}, {data.dds3}\n"
-            "Please keep your response concise and limit it to no more than 360 words."
+    "The predicted therapy effectiveness probabilities over three visits are:\n{prob_text}\n\n"
+
+    "Format output in strict markdown with the following sections:\n\n"
+
+    "### 📋 Insights\n"
+    "- **HbA1c**: one short statement.\n\n"
+    "- **FVG**: one short statement.\n\n"
+    "- **DDS**: one short statement.\n\n"
+
+    "### 📝 Justification\n"
+    "- 2–3 short but concise sentences explaining how HbA1c, FVG, and DDS trends justify the probabilities. Make sure these 3 are in bold to highlight separation\n\n"
+
+    "Rules:\n"
+    "- Always use `-` at the start of bullets.\n"
+    "- Do not mix multiple points in one line.\n"
+    "- Make sure for insights, it enters a new line after each bullet.\n"
+    "- Keep all sections under 360 words total.\n"
+    "- Use only markdown (no HTML).\n"
+
+    f"HbA1c scores: {data.hba1c1}, {data.hba1c2}, {data.hba1c3}\n"
+    f"FVG scores: {data.fvg1}, {data.fvg2}, {data.fvg3}\n"
+    f"DDS scores: {data.dds1}, {data.dds3}\n"
         )
 
         llm = groq_client.chat.completions.create(

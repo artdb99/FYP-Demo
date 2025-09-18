@@ -19,7 +19,7 @@ const TreatmentRecommendation = () => {
   const [aiResponse, setAiResponse] = useState("");
   const [loading, setLoading] = useState(false);
   const [ragContext, setRagContext] = useState(""); // Add this to state
-  
+
 
   useEffect(() => {
     const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
@@ -86,7 +86,6 @@ Instructions:
     }
   }, [id]);
 
-
   if (!patient) return <div className="p-6 text-center">Loading patient data...</div>;
 
   const hba1cDrop = (patient.reduction_a ?? 0).toFixed(1);
@@ -126,14 +125,14 @@ Instructions:
             <p className="text-sm text-gray-700">{patient.age} y/o — {patient.gender}</p>
           </div>
           <div className="mt-2 md:mt-0">
-  <button
-    className="bg-indigo-200 text-indigo-800 text-xs px-3 py-1 rounded border border-indigo-300 hover:bg-indigo-300 transition"
-    onClick={generateReport}
-    disabled={loading}
-  >
-    {aiResponse ? "Regenerate Report" : "Generate Report"}
-  </button>
-</div>
+            <button
+              className="bg-indigo-200 text-indigo-800 text-xs px-3 py-1 rounded border border-indigo-300 hover:bg-indigo-300 transition"
+              onClick={generateReport}
+              disabled={loading}
+            >
+              {aiResponse ? "Regenerate Report" : "Generate Report"}
+            </button>
+          </div>
         </div>
         <p className="text-sm text-indigo-600 mt-2">AI-based treatment insights below</p>
       </div>
@@ -179,8 +178,20 @@ Instructions:
               <section key={index} className="bg-green-50 border border-green-200 rounded-xl shadow p-6 text-green-900 space-y-4">
                 <h2 className="text-lg font-bold mb-2">Clinical Trend Overview</h2>
                 <div className="grid md:grid-cols-3 gap-4">
-                  <TrendCard label="HbA1c Trend" values={[patient.hba1c_1st_visit, patient.hba1c_2nd_visit, patient.hba1c_3rd_visit]} unit="%" />
-                  <TrendCard label="FVG Trend" values={[patient.fvg_1, patient.fvg_2, patient.fvg_3]} unit="mmol/L" />
+                  <TrendCard
+                    label="HbA1c Trend"
+                    values={[patient.hba1c_1st_visit, patient.hba1c_2nd_visit, patient.hba1c_3rd_visit]}
+                    unit="%"
+                    warn={patient.hba1c_3rd_visit > patient.hba1c_2nd_visit}
+                  />
+
+                  <TrendCard
+                    label="FVG Trend"
+                    values={[patient.fvg_1, patient.fvg_2, patient.fvg_3]}
+                    unit="mmol/L"
+                    warn={patient.fvg_3 > patient.fvg_2}
+                  />
+
                   <TrendCard label="HbA1c Δ / 91d" values={[patient.reduction_a?.toFixed(2)]} unit="%" />
                 </div>
               </section>
@@ -330,18 +341,29 @@ const StatBox = ({ label, value, note }) => (
   </div>
 );
 
-const TrendCard = ({ label, values, unit }) => {
+const TrendCard = ({ label, values, unit, warn = false }) => {
+  let trendIcon = '–';
+  let trendText = 'Stable';
+
+  if (values.length >= 3) {
+    if (values[2] > values[1]) {
+      trendIcon = '📈';
+      trendText = 'Increasing';
+    } else if (values[2] < values[1]) {
+      trendIcon = '📉';
+      trendText = 'Decreasing';
+    }
+  }
+
+  const boxClass = warn
+    ? "bg-red-100 border border-red-300 text-red-800"
+    : "bg-white border border-green-100 text-green-700";
+
   return (
-    <div className="bg-white border border-green-100 p-4 rounded shadow-sm text-center">
-      <h4 className="text-xs uppercase text-gray-500 font-semibold">{label}</h4>
-      <p className="text-xl font-bold text-green-700">{values.join(" → ")} {unit}</p>
-      <p className="text-sm mt-1">
-        {values.length >= 2
-          ? values[values.length - 1] > values[0]
-            ? '📈 Increasing'
-            : '📉 Decreasing'
-          : '–'}
-      </p>
+    <div className={`${boxClass} p-4 rounded shadow-sm text-center`}>
+      <h4 className="text-xs uppercase font-semibold">{label}</h4>
+      <p className="text-xl font-bold">{values.join(" → ")} {unit}</p>
+      <p className="text-sm mt-1">{trendIcon} {trendText}</p>
     </div>
   );
 };

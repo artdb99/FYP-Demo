@@ -12,28 +12,26 @@ Chart.register(ArcElement, Tooltip, Legend);
 
 const TherapyDashboard = () => {
   const [patients, setPatients] = useState([]);
-  const [filtered, setFiltered] = useState([]);
+
+  // Filters, search and pagination states
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [insulinFilter, setInsulinFilter] = useState('All');
+  const [genderFilter, setGenderFilter] = useState('All');
+  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
-    fetch(`${laravelUrl}/api/patients`)
+    fetch('http://localhost:8000/api/patients')
       .then(res => res.json())
-      .then(data => {
-        setPatients(data);
-        setFiltered(data);
-      });
+      .then(data => setPatients(data))
+      .catch(err => console.error(err));
   }, []);
 
+  // Reset to page 1 when filters or search or pageSize change
   useEffect(() => {
-    const q = search.toLowerCase();
-    let result = patients.filter(p => p.name.toLowerCase().includes(q));
-    if (activeFilter !== 'All') {
-      result = result.filter(p => getPatientStatus(p) === activeFilter);
-    }
-    setFiltered(result);
-  }, [search, patients, activeFilter]);
+    setCurrentPage(1);
+  }, [statusFilter, insulinFilter, genderFilter, search, pageSize]);
 
   const getPatientStatus = (p) => {
     if (p.reduction_a > 0.5) return 'Improved';
@@ -49,6 +47,30 @@ const TherapyDashboard = () => {
     const total = valid.reduce((sum, p) => sum + parseFloat(p.reduction_a || 0), 0);
     return valid.length ? (total / valid.length).toFixed(2) : 0;
   };
+
+  // Filter patients based on search and filters
+  const filteredPatients = patients.filter(p => {
+    const name = p.name.toLowerCase();
+    const status = getPatientStatus(p);
+    const insulin = p.insulin || '';
+    const gender = p.gender || '';
+
+    const matchesSearch = name.includes(search.toLowerCase());
+    const matchesStatus = statusFilter === 'All' || status === statusFilter;
+    const matchesInsulin = insulinFilter === 'All' || insulin === insulinFilter;
+    const matchesGender = genderFilter === 'All' || gender === genderFilter;
+
+    return matchesSearch && matchesStatus && matchesInsulin && matchesGender;
+  });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPatients.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const visiblePatients = filteredPatients.slice(startIndex, startIndex + pageSize);
+
+  // Unique insulin types and genders for filter options
+  const insulinTypes = Array.from(new Set(patients.map(p => p.insulin).filter(Boolean)));
+  const genders = Array.from(new Set(patients.map(p => p.gender).filter(Boolean)));
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
@@ -89,49 +111,122 @@ const TherapyDashboard = () => {
         />
       </div>
 
-      <div className="flex gap-4 border-b text-sm mt-10 mb-2 bg-white">
-        {['All', 'Improved', 'Review', 'Stable'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveFilter(tab)}
-            className={`py-2 px-4 border-b-2 font-medium bg-white text-gray-800 hover:text-blue-600 ${activeFilter === tab ? 'border-blue-600 text-blue-600' : 'border-transparent'
-              }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {/* Filters and search */}
+      <div className="flex flex-wrap gap-4 items-center mt-10 mb-4">
+        <select
+          className="border rounded px-3 py-2"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="All">All Status</option>
+          <option value="Improved">Improved</option>
+          <option value="Review">Review</option>
+          <option value="Stable">Stable</option>
+        </select>
 
-      {/* Search */}
-      <div className="flex justify-between items-center mt-10 mb-4">
+        <select
+          className="border rounded px-3 py-2"
+          value={insulinFilter}
+          onChange={(e) => setInsulinFilter(e.target.value)}
+        >
+          <option value="All">All Insulin Types</option>
+          {insulinTypes.map(type => (
+            <option key={type} value={type}>{type}</option>
+          ))}
+        </select>
+
+        <select
+          className="border rounded px-3 py-2"
+          value={genderFilter}
+          onChange={(e) => setGenderFilter(e.target.value)}
+        >
+          <option value="All">All Genders</option>
+          {genders.map(g => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+
         <input
           type="text"
           placeholder="Search patients..."
-          className="border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-4 py-2 w-1/3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="border rounded px-3 py-2 flex-grow min-w-[200px]"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={e => setSearch(e.target.value)}
         />
+
+        <select
+          className="border rounded px-3 py-2"
+          value={pageSize}
+          onChange={e => setPageSize(Number(e.target.value))}
+        >
+          {[10, 25, 50, 100].map(size => (
+            <option key={size} value={size}>{size} per page</option>
+          ))}
+        </select>
       </div>
 
-      {/* Patient Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map(p => (
-          <Link
-            to={`/therapy-effectiveness/${p.id}`}
-            key={p.id}
-            className="border rounded-lg p-4 shadow hover:shadow-md transition"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <h4 className="font-semibold">{p.name}</h4>
-                <p className="text-sm text-gray-600">{p.age} y/o — {p.gender}</p>
-                <p className="text-xs text-gray-400 mt-1">Updated: {new Date(p.updated_at).toLocaleDateString()}</p>
+      {/* Patient cards grid */}
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+        {visiblePatients.length === 0 ? (
+          <div className="col-span-full text-center text-gray-500 py-10">
+            No patients found.
+          </div>
+        ) : (
+          visiblePatients.map(p => (
+            <Link
+              to={`/therapy-effectiveness/${p.id}`}
+              key={p.id}
+              className="border rounded-lg p-4 shadow hover:shadow-md transition"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-semibold text-blue-600 hover:underline">{p.name}</h4>
+                  <p className="text-sm text-gray-600">{p.age} y/o — {p.gender}</p>
+                  <p className="text-xs text-gray-400 mt-1">Updated: {new Date(p.updated_at).toLocaleDateString()}</p>
+                </div>
+                <StatusBadge status={getPatientStatus(p)} />
               </div>
-              <StatusBadge status={getPatientStatus(p)} />
-            </div>
-          </Link>
-        ))}
+            </Link>
+          ))
+        )}
       </div>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center space-x-2 mt-6">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
+
+          {[...Array(totalPages)].map((_, i) => {
+            const pageNum = i + 1;
+            return (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`px-3 py-1 border rounded ${
+                  pageNum === currentPage ? 'bg-indigo-500 text-white' : ''
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+
+          <button
+            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -156,16 +251,15 @@ const KpiCard = ({ title, value, icon, color }) => {
   );
 };
 
-// Badge
+// Status badge
 const StatusBadge = ({ status }) => {
-  const badgeColor = {
+  const badgeColors = {
     Improved: 'bg-green-100 text-green-800',
     Review: 'bg-red-100 text-red-800',
     Stable: 'bg-yellow-100 text-yellow-800'
   };
-
   return (
-    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${badgeColor[status]}`}>
+    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${badgeColors[status]}`}>
       {status}
     </span>
   );
