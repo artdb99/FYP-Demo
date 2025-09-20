@@ -6,7 +6,7 @@ const AdminPatients = () => {
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-6">
       {/* Admin Header */}
-      <header className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-6 px-6 rounded-lg shadow-md flex justify-between items-center">
+      <header className="bg-gradient-to-r from-teal-500 to-green-500 text-white py-6 px-6 rounded-lg shadow-md flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Patient Management</h1>
           <p className="text-sm">View, manage, and add new patients</p>

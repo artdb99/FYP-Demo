@@ -58,7 +58,7 @@ const ManageUsers = () => {
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
       {/* Header */}
-      <header className="bg-purple-600 text-white py-4 px-6 rounded-lg shadow-md mb-6">
+      <header className="bg-gradient-to-r from-teal-500 to-green-500 text-white py-4 px-6 rounded-lg shadow-md mb-6">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold">User Management</h1>
