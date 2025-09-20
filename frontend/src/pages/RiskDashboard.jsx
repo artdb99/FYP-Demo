@@ -134,7 +134,7 @@ const RiskDashboard = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-            <div className="bg-indigo-500 text-white rounded-lg p-6 mb-8 flex justify-between items-center flex-wrap gap-4">
+            <div className="bg-teal-500 text-white rounded-lg p-6 mb-8 flex justify-between items-center flex-wrap gap-4">
                 <div>
                     <h2 className="text-xl font-bold">Risk Prediction</h2>
                     <p className="text-sm text-blue-100">Model-driven prediction of diabetes severity</p>

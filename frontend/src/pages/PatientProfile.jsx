@@ -111,13 +111,40 @@ const PatientProfile = () => {
 
   const pa = activityMeta(patient.physical_activity);
 
+  const getStatusTag = (p) => {
+    const hbDrop = p.reduction_a_2_3 ?? null;
+    const fvgDelta = p.fvg_delta_1_2 ?? null;
+    const ddsTrend = p.dds_trend_1_3 ?? null;
+
+    // HbA1c priority
+    if (hbDrop !== null) {
+      if (hbDrop > 1.0) return 'Improving';
+      if (hbDrop < 0) return 'Worsening';
+      // 0–1% drop → Stable
+    }
+
+    // FVG fallback
+    if (fvgDelta !== null) {
+      if (fvgDelta < -1.0) return 'Improving';
+      if (fvgDelta > 1.0) return 'Worsening';
+    }
+
+    // DDS advisory
+    if (ddsTrend !== null && ddsTrend > 1) {
+      return 'Needs Review';
+    }
+
+    return 'Stable';
+  };
+
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-10 bg-white text-gray-800">
 
       {/* Top Grid */}
       <div className="grid md:grid-cols-3 gap-6">
         {/* Profile Card */}
-        <div className="bg-white shadow-lg rounded-xl p-6 text-center space-y-4">
+        <div className="bg-teal-50 border border-teal-200 shadow-lg rounded-xl p-6 text-center space-y-4">
           <img
             src={`https://ui-avatars.com/api/?name=${patient.name}&background=random`}
             className="w-24 h-24 mx-auto rounded-full"
@@ -137,30 +164,60 @@ const PatientProfile = () => {
           )}
 
           <p className="text-gray-500 text-sm">{patient.gender}, {patient.age} years old</p>
-          <span className="inline-block bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full">
-            Improving
-          </span>
+          {/* Dynamic Status */}
+          {patient && (
+            <span
+              className={`inline-block text-xs px-3 py-1 rounded-full ${getStatusTag(patient) === 'Improving'
+                  ? 'bg-green-200 text-green-900'
+                  : getStatusTag(patient) === 'Worsening'
+                    ? 'bg-red-200 text-red-900'
+                    : getStatusTag(patient) === 'Needs Review'
+                      ? 'bg-orange-100 text-orange-600'
+                      : 'bg-yellow-200 text-yellow-800'
+                }`}
+            >
+              {getStatusTag(patient)}
+            </span>
+          )}
 
-          <div className="text-left text-sm mt-4">
-            <h4 className="text-gray-600 font-semibold mb-1">Personal Information</h4>
-            <ul className="space-y-1 text-gray-700">
-              <li><strong>Height:</strong> {patient.height_cm ? `${patient.height_cm} cm` : 'N/A'}</li>
-              <li><strong>Weight:</strong> {patient.weight_kg ? `${patient.weight_kg} kg` : 'N/A'}</li>
-              <li><strong>Insulin Regimen:</strong> {patient.insulin_regimen_type}</li>
-              <li><strong>First Visit:</strong> {formatDate(patient.first_visit_date)}</li>
-              <li><strong>Second Visit:</strong> {formatDate(patient.second_visit_date)}</li>
-              <li><strong>Third Visit:</strong> {formatDate(patient.third_visit_date)}</li>
-            </ul>
 
-            <h4 className="mt-4 text-gray-600 font-semibold mb-1">Contact</h4>
-            <p>📧 patient@example.com</p>
-            <p>📞 (555) 123-4567</p>
+          {/* Personal Info Section */}
+          <div className="mt-4 space-y-4">
+            <h4 className="text-gray-600 font-semibold mb-2">Personal Information</h4>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <InfoItem icon="📏" label="Height" value={patient.height_cm ? `${patient.height_cm} cm` : 'N/A'} />
+              <InfoItem icon="⚖️" label="Weight" value={patient.weight_kg ? `${patient.weight_kg} kg` : 'N/A'} />
+              <InfoItem icon="💉" label="Insulin" value={patient.insulin_regimen_type || 'N/A'} />
+              <InfoItem icon="📅" label="1st Visit" value={formatDate(patient.first_visit_date)} />
+              <InfoItem icon="📅" label="2nd Visit" value={formatDate(patient.second_visit_date)} />
+              <InfoItem icon="📅" label="3rd Visit" value={formatDate(patient.third_visit_date)} />
+            </div>
+
+            <h4 className="text-gray-600 font-semibold mt-4 mb-2">Contact</h4>
+            <div className="space-y-1 text-sm">
+              <p className="flex items-center gap-2 text-gray-700">
+                <span className="text-blue-500">📧</span> {patient.email || 'N/A'}
+              </p>
+              <p className="flex items-center gap-2 text-gray-700">
+                <span className="text-pink-500">📞</span> {patient.phone || 'N/A'}
+              </p>
+            </div>
           </div>
 
-          <div className="mt-4">
-            <h4 className="text-gray-600 font-semibold mb-1">Remarks</h4>
-            <p className="text-gray-700 text-sm">{patient.remarks || 'N/A'}</p>
+
+          {/* Remarks */}
+          <div className="mt-6">
+            <h4 className="text-gray-600 font-semibold mb-2">Remarks</h4>
+            <div className={`rounded-lg p-4 shadow-sm border-l-4 ${patient.remarks ? 'bg-yellow-50 border-yellow-400' : 'bg-gray-50 border-gray-300'
+              }`}>
+              <p className="text-sm text-gray-800 italic">
+                {patient.remarks && patient.remarks.trim() !== ''
+                  ? `“${patient.remarks}”`
+                  : 'No remarks provided.'}
+              </p>
+            </div>
           </div>
+
         </div>
 
         {/* Stat Cards */}
@@ -203,27 +260,31 @@ const PatientProfile = () => {
           </div>
         </div>
 
-        {/* Visit Timeline */}
+        {/* Visit Cards */}
         <div className="bg-white rounded-xl shadow p-6 md:col-span-2">
-          <h4 className="text-gray-700 font-semibold mb-4">Visit Timeline</h4>
-          <ul className="space-y-4 text-sm text-gray-700">
-            <li>
-              <strong>🟣 First Visit</strong> ({patient.first_visit_date})<br />
-              Initial assessment and treatment plan. HbA1c: {patient.hba1c_1st_visit}
-            </li>
-            <li>
-              <strong>🔵 Second Visit</strong> ({patient.second_visit_date})<br />
-              Adjustment and follow-up. HbA1c: {patient.hba1c_2nd_visit}
-            </li>
-            <li>
-              <strong>🟢 Third Visit</strong> ({patient.third_visit_date})<br />
-              Long-term plan review. HbA1c: {patient.hba1c_3rd_visit}
-            </li>
-            <li>
-              <strong>📆 Next Appointment:</strong> In 3 months
-            </li>
-          </ul>
+          <h4 className="text-gray-700 font-semibold mb-4">Visit Summary</h4>
+          <div className="grid md:grid-cols-3 gap-4">
+            <VisitCard
+              visit="Visit 1"
+              hba1c={patient.hba1c_1st_visit}
+              fvg={patient.fvg_1}
+              dds={patient.dds_1}
+            />
+            <VisitCard
+              visit="Visit 2"
+              hba1c={patient.hba1c_2nd_visit}
+              fvg={patient.fvg_2}
+              dds={(patient.dds_1 + patient.dds_3) / 2}
+            />
+            <VisitCard
+              visit="Visit 3"
+              hba1c={patient.hba1c_3rd_visit}
+              fvg={patient.fvg_3}
+              dds={patient.dds_3}
+            />
+          </div>
         </div>
+
       </div>
 
     </div>
@@ -265,5 +326,37 @@ const NoteCard = ({ title, text, color }) => {
     </li>
   );
 };
+
+const VisitCard = ({ visit, hba1c, fvg, dds }) => (
+  <div className="bg-white shadow-md rounded-xl p-5 flex flex-col space-y-3 text-center hover:shadow-lg transition">
+    <h5 className="font-bold text-indigo-600">{visit}</h5>
+
+    <div className="flex items-center justify-between bg-indigo-50 px-3 py-2 rounded-md">
+      <span className="text-sm font-medium text-gray-600">HbA1c</span>
+      <span className="text-indigo-700 font-bold">{hba1c?.toFixed(1)}</span>
+    </div>
+
+    <div className="flex items-center justify-between bg-green-50 px-3 py-2 rounded-md">
+      <span className="text-sm font-medium text-gray-600">FVG</span>
+      <span className="text-green-700 font-bold">{fvg?.toFixed(1)}</span>
+    </div>
+
+    <div className="flex items-center justify-between bg-purple-50 px-3 py-2 rounded-md">
+      <span className="text-sm font-medium text-gray-600">DDS</span>
+      <span className="text-purple-700 font-bold">{dds?.toFixed(2)}</span>
+    </div>
+  </div>
+);
+
+const InfoItem = ({ icon, label, value }) => (
+  <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md shadow-sm">
+    <span className="text-lg">{icon}</span>
+    <div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="font-semibold text-gray-800">{value}</p>
+    </div>
+  </div>
+);
+
 
 export default PatientProfile;

@@ -223,32 +223,6 @@ const TherapyEffectivenessForm = () => {
         </div>
       )}
 
-      {/* Key Insights */}
-      {topFactors.length > 0 && (
-        <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded">
-          <h4 className="font-semibold text-gray-800 mb-2">🔑 Key Insights</h4>
-          <ul className="list-disc ml-6 text-sm text-gray-700 space-y-1">
-            {topFactors.slice(0, 3).map((factor, idx) => {
-              // Clean label
-              let cleanLabel = factor.feature
-                .replace("remainder__", "")
-                .replace(/_/g, " ")
-                .replace("1 3", "(1→3)")   // special case
-                .replace("1 2", "(1→2)"); // special case
-
-              // Format importance nicely
-              const importance = (Number(factor.importance) * 100).toFixed(1) + "%";
-
-              return (
-                <li key={idx}>
-                  <strong>{cleanLabel}:</strong> {importance}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
       {/* LLM-Based Insight + Key Numbers */}
       {llmInsight && (
         <div className="p-6 rounded-xl shadow bg-green-50 border-l-4 border-green-500 text-green-900 space-y-6">

@@ -79,6 +79,7 @@ class PatientController extends Controller
         $patient->avg_fvg_1_2 = ($fvg1 !== null && $fvg2 !== null) ? ($fvg1 + $fvg2) / 2 : null;
         $patient->fvg_delta_1_2 = ($fvg2 !== null && $fvg1 !== null) ? ($fvg2 - $fvg1) : null;
         $patient->reduction_a = ($hba1c1 !== null && $hba1c2 !== null) ? ($hba1c1 - $hba1c2) : null;
+        $patient->reduction_a_2_3 = ($hba1c2 !== null && $hba1c3 !== null) ? ($hba1c2 - $hba1c3) : null;
         $patient->reduction_a_per_day = ($hba1c1 !== null && $hba1c2 !== null && $firstVisit && $secondVisit)
             ? ($hba1c1 - $hba1c2) / max($firstVisit->diffInDays($secondVisit), 1)
             : null;
@@ -161,6 +162,7 @@ class PatientController extends Controller
     $patient->avg_fvg_1_2 = ($fvg1 !== null && $fvg2 !== null) ? ($fvg1 + $fvg2) / 2 : null;
     $patient->fvg_delta_1_2 = ($fvg2 !== null && $fvg1 !== null) ? ($fvg2 - $fvg1) : null;
     $patient->reduction_a = ($hba1c1 !== null && $hba1c2 !== null) ? ($hba1c1 - $hba1c2) : null;
+    $patient->reduction_a_2_3 = ($hba1c2 !== null && $hba1c3 !== null) ? ($hba1c2 - $hba1c3) : null;
     $patient->reduction_a_per_day = ($hba1c1 !== null && $hba1c2 !== null && $firstVisit && $secondVisit)
         ? ($hba1c1 - $hba1c2) / max($firstVisit->diffInDays($secondVisit), 1)
         : null;

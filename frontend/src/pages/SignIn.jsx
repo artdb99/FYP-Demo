@@ -39,7 +39,7 @@ const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-green-600 to-teal-600 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg mx-4">
         <h2 className="text-3xl font-bold text-center text-purple-700 dark:text-purple-400 mb-1">Welcome Back</h2>
         <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-6">Sign in to your account</p>

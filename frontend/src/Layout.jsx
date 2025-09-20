@@ -17,7 +17,7 @@ function Layout({ children }) {
       {/* Sidebar */}
       <aside
         className={`flex flex-col h-full overflow-y-auto transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'
-          } bg-gradient-to-b from-indigo-500 to-purple-700 text-white shadow-xl`}>
+          } bg-gradient-to-b from-teal-500 to-green-600 text-white shadow-xl`}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/20">
           {!collapsed && (
             <div className="flex-1 flex justify-center">
@@ -151,17 +151,6 @@ function Layout({ children }) {
                     }`}
                 >
                   {collapsed ? '➕' : 'Manage Patients'}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/admin/analytics"
-                  className={`block px-3 py-2 rounded transition text-center ${isActive('/admin/analytics')
-                    ? 'bg-white text-purple-700 font-bold'
-                    : 'text-white/90 hover:bg-white/20'
-                    }`}
-                >
-                  {collapsed ? '📊' : 'System Analytics'}
                 </Link>
               </li>
             </ul>

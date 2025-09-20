@@ -155,8 +155,6 @@ Instructions:
 
       {/* Kidney & DDS Cards */}
       <section className="grid md:grid-cols-3 gap-6">
-        <StatBox label="Kidney Function (eGFR)" value={egfr} note={egfr >= 90 ? "Normal" : egfr >= 60 ? "Mild decline" : "Monitor closely"} />
-        <StatBox label="Diabetes Distress Score" value={ddsTrend} note={ddsTrend <= 2 ? "Low" : ddsTrend <= 3 ? "Moderate" : "High"} />
         <StatBox label="Current Medications" value={patient.medications || 'N/A'} />
       </section>
 
@@ -266,9 +264,16 @@ Instructions:
               <section key={index} className="bg-purple-50 border border-purple-200 rounded-xl shadow p-6 text-purple-900">
                 <h2 className="text-lg font-bold mb-2">{title.trim()}</h2>
                 <ul className="grid md:grid-cols-2 gap-2 text-sm list-disc list-inside">
-                  {lines.slice(0, 6).map((line, i) => (
-                    <li key={i} dangerouslySetInnerHTML={{ __html: parseMarkdownBold(line.trim().slice(0, 60)) }} />
-                  ))}
+                  {lines.slice(0, 6).map((line, i) => {
+                    const cleanLine = line.replace(/^\s*[-*]\s*/, ""); // remove leading "-" or "*"
+                    return (
+                      <li
+                        key={i}
+                        className="leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: parseMarkdownBold(cleanLine.trim()) }}
+                      />
+                    );
+                  })}
                 </ul>
               </section>
             );

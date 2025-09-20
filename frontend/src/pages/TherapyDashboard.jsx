@@ -35,17 +35,19 @@ const TherapyDashboard = () => {
   }, [statusFilter, insulinFilter, genderFilter, search, pageSize]);
 
   const getPatientStatus = (p) => {
-    if (p.reduction_a > 0.5) return 'Improved';
-    if (p.reduction_a < 0.3) return 'Review';
-    return 'Stable';
+    if (p.reduction_a_2_3 == null) return 'Review'; // no data
+    if (p.reduction_a_2_3 > 0.5) return 'Improved'; // dropped > 0.5%
+    if (p.reduction_a_2_3 < 0) return 'Review';     // got worse (hba1c3 higher)
+    return 'Stable';                                // small drop between 0–0.5%
   };
+
 
   const countStatus = (status) =>
     patients.filter(p => getPatientStatus(p) === status).length;
 
   const avgHbA1cDrop = () => {
-    const valid = patients.filter(p => p.reduction_a);
-    const total = valid.reduce((sum, p) => sum + parseFloat(p.reduction_a || 0), 0);
+    const valid = patients.filter(p => p.reduction_a_2_3 != null);
+    const total = valid.reduce((sum, p) => sum + parseFloat(p.reduction_a_2_3 || 0), 0);
     return valid.length ? (total / valid.length).toFixed(2) : 0;
   };
 
@@ -76,7 +78,7 @@ const TherapyDashboard = () => {
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
 
-      <div className="bg-indigo-500 text-white rounded-lg p-6 mb-8">
+      <div className="bg-teal-500 text-white rounded-lg p-6 mb-8">
         <h2 className="text-xl font-bold">Therapy Effectiveness Overview</h2>
         <p className="text-sm text-blue-100">Track reduction trends and therapy impact across all patients</p>
       </div>
@@ -209,9 +211,8 @@ const TherapyDashboard = () => {
               <button
                 key={pageNum}
                 onClick={() => setCurrentPage(pageNum)}
-                className={`px-3 py-1 border rounded ${
-                  pageNum === currentPage ? 'bg-indigo-500 text-white' : ''
-                }`}
+                className={`px-3 py-1 border rounded ${pageNum === currentPage ? 'bg-indigo-500 text-white' : ''
+                  }`}
               >
                 {pageNum}
               </button>

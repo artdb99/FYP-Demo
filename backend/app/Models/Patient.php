@@ -16,6 +16,7 @@ class Patient extends Model
     // Derived fields
     'avg_fvg_1_2', 'fvg_delta_1_2',
     'reduction_a', 'reduction_a_per_day',
+    'reduction_a_2_3',
     'gap_from_initial_visit', 'gap_from_first_clinical_visit',
     'dds_trend_1_3'
 ];

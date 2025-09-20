@@ -14,20 +14,20 @@ const PatientsList = ({ hideHeader = false }) => {
   const { user } = useUser(); // get current logged-in user
 
   const handleDelete = async (id) => {
-  if (!window.confirm("Are you sure you want to delete this patient?")) return;
+    if (!window.confirm("Are you sure you want to delete this patient?")) return;
 
-  try {
-    const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
-    await fetch(`${laravelUrl}/api/admin/patients/${id}`, {
-      method: 'DELETE',
-    });
+    try {
+      const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+      await fetch(`${laravelUrl}/api/admin/patients/${id}`, {
+        method: 'DELETE',
+      });
 
-    // Update local state to remove patient immediately
-    setPatients((prev) => prev.filter((p) => p.id !== id));
-  } catch (err) {
-    console.error("Error deleting patient:", err);
-  }
-};
+      // Update local state to remove patient immediately
+      setPatients((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("Error deleting patient:", err);
+    }
+  };
 
 
   useEffect(() => {
@@ -54,9 +54,28 @@ const PatientsList = ({ hideHeader = false }) => {
     days != null ? `${Math.round(days)} days` : '-';
 
   const getStatusTag = (p) => {
-    if (p.reduction_a < 0 && p.fvg_delta_1_2 < 0 && p.dds_trend_1_3 < 0)
-      return 'Improving';
-    if (p.reduction_a > 0 && p.fvg_delta_1_2 > 0) return 'Worsening';
+    const hbDrop = p.reduction_a_2_3 ?? null;
+    const fvgDelta = p.fvg_delta_1_2 ?? null;
+    const ddsTrend = p.dds_trend_1_3 ?? null;
+
+    // HbA1c priority
+    if (hbDrop !== null) {
+      if (hbDrop > 1.0) return 'Improving';
+      if (hbDrop < 0) return 'Worsening';
+      // 0–1% drop → Stable
+    }
+
+    // FVG fallback
+    if (fvgDelta !== null) {
+      if (fvgDelta < -1.0) return 'Improving';
+      if (fvgDelta > 1.0) return 'Worsening';
+    }
+
+    // DDS advisory
+    if (ddsTrend !== null && ddsTrend > 1) {
+      return 'Needs Review';
+    }
+
     return 'Stable';
   };
 
@@ -113,7 +132,7 @@ const PatientsList = ({ hideHeader = false }) => {
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-10">
       {/* Conditional Header */}
       {!hideHeader && (
-        <header className="bg-indigo-500 text-white py-4 px-6 rounded-lg shadow-md mb-6">
+        <header className="bg-teal-500 text-white py-4 px-6 rounded-lg shadow-md mb-6">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-xl font-bold">Patient Management</h1>
@@ -191,38 +210,28 @@ const PatientsList = ({ hideHeader = false }) => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
-        <SummaryCard label="Total Patients" value={patients.length} type="total" />
+        <SummaryCard
+          label="Total Patients"
+          value={patients.length}
+          type="total"
+        />
         <SummaryCard
           label="Improving"
-          value={patients.filter(
-            (p) =>
-              p.reduction_a < 0 &&
-              p.fvg_delta_1_2 < 0 &&
-              p.dds_trend_1_3 < 0
-          ).length}
+          value={patients.filter((p) => getStatusTag(p) === 'Improving').length}
           type="improving"
         />
         <SummaryCard
           label="Stable"
-          value={patients.filter(
-            (p) =>
-              !(
-                (p.reduction_a < 0 &&
-                  p.fvg_delta_1_2 < 0 &&
-                  p.dds_trend_1_3 < 0) ||
-                (p.reduction_a > 0 && p.fvg_delta_1_2 > 0)
-              )
-          ).length}
+          value={patients.filter((p) => getStatusTag(p) === 'Stable').length}
           type="stable"
         />
         <SummaryCard
           label="Worsening"
-          value={patients.filter(
-            (p) => p.reduction_a > 0 && p.fvg_delta_1_2 > 0
-          ).length}
+          value={patients.filter((p) => getStatusTag(p) === 'Worsening').length}
           type="worsening"
         />
       </div>
+
 
       {/* Table */}
       <div className="overflow-x-auto bg-white shadow rounded-lg border">
@@ -273,8 +282,8 @@ const PatientsList = ({ hideHeader = false }) => {
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs px-2 py-1 rounded-full ${p.gender === 'Male'
-                          ? 'bg-blue-100 text-blue-600'
-                          : 'bg-pink-100 text-pink-600'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-pink-100 text-pink-600'
                         }`}
                     >
                       {p.gender}
@@ -309,10 +318,10 @@ const PatientsList = ({ hideHeader = false }) => {
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs px-2 py-1 rounded-full ${getStatusTag(p) === 'Improving'
-                          ? 'bg-green-100 text-green-700'
-                          : getStatusTag(p) === 'Worsening'
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-yellow-100 text-yellow-600'
+                        ? 'bg-green-100 text-green-700'
+                        : getStatusTag(p) === 'Worsening'
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-yellow-100 text-yellow-600'
                         }`}
                     >
                       {getStatusTag(p)}
@@ -361,8 +370,8 @@ const PatientsList = ({ hideHeader = false }) => {
                 key={pageNum}
                 onClick={() => setCurrentPage(pageNum)}
                 className={`px-3 py-1 border rounded ${pageNum === currentPage
-                    ? 'bg-indigo-500 text-white'
-                    : ''
+                  ? 'bg-indigo-500 text-white'
+                  : ''
                   }`}
               >
                 {pageNum}
