@@ -35,12 +35,24 @@ const TherapyDashboard = () => {
   }, [statusFilter, insulinFilter, genderFilter, search, pageSize]);
 
   const getPatientStatus = (p) => {
-    if (p.reduction_a_2_3 == null) return 'Review'; // no data
-    if (p.reduction_a_2_3 > 0.5) return 'Improved'; // dropped > 0.5%
-    if (p.reduction_a_2_3 < 0) return 'Review';     // got worse (hba1c3 higher)
-    return 'Stable';                                // small drop between 0–0.5%
-  };
+    const hbDrop = p.reduction_a_2_3 ?? null;
+    const fvgDelta = p.fvg_delta_1_2 ?? null;
+    const ddsTrend = p.dds_trend_1_3 ?? null;
 
+    // HbA1c priority
+    if (hbDrop !== null) {
+      if (hbDrop > 1.0) return 'Improving';
+      if (hbDrop < 0) return 'Worsening';
+    }
+
+    // FVG fallback
+    if (fvgDelta !== null) {
+      if (fvgDelta < -1.0) return 'Improving';
+      if (fvgDelta > 1.0) return 'Worsening';
+    }
+
+    return 'Stable';
+  };
 
   const countStatus = (status) =>
     patients.filter(p => getPatientStatus(p) === status).length;
@@ -86,9 +98,9 @@ const TherapyDashboard = () => {
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <KpiCard title="Total Patients" value={patients.length} icon="👥" color="blue" />
-        <KpiCard title="Improved" value={countStatus('Improved')} icon="✅" color="green" />
-        <KpiCard title="Review Needed" value={countStatus('Review')} icon="⚠️" color="red" />
-        <KpiCard title="Avg. HbA1c Drop" value={`${avgHbA1cDrop()} %`} icon="📉" color="amber" />
+        <KpiCard title="Improving" value={countStatus('Improving')} icon="✅" color="green" />
+        <KpiCard title="Stable" value={countStatus('Stable')} icon="➖" color="amber" />
+        <KpiCard title="Worsening" value={countStatus('Worsening')} icon="❌" color="red" />
       </div>
 
       {/* Doughnut Chart */}
@@ -96,14 +108,14 @@ const TherapyDashboard = () => {
         <h3 className="font-semibold mb-3 text-center">Patient Status Overview</h3>
         <Doughnut
           data={{
-            labels: ['Improved', 'Review', 'Stable'],
+            labels: ['Improving', 'Stable', 'Worsening'],
             datasets: [{
               data: [
-                countStatus('Improved'),
-                countStatus('Review'),
-                countStatus('Stable')
+                countStatus('Improving'),
+                countStatus('Stable'),
+                countStatus('Worsening')
               ],
-              backgroundColor: ['#10b981', '#ef4444', '#facc15']
+              backgroundColor: ['#10b981', '#facc15', '#ef4444'] // green, yellow, red
             }]
           }}
           options={{
@@ -256,15 +268,16 @@ const KpiCard = ({ title, value, icon, color }) => {
 // Status badge
 const StatusBadge = ({ status }) => {
   const badgeColors = {
-    Improved: 'bg-green-100 text-green-800',
-    Review: 'bg-red-100 text-red-800',
-    Stable: 'bg-yellow-100 text-yellow-800'
+    Improving: 'bg-green-100 text-green-700',
+    Worsening: 'bg-red-100 text-red-600',
+    Stable: 'bg-yellow-100 text-yellow-600'
   };
   return (
-    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${badgeColors[status]}`}>
+    <span className={`text-xs px-2 py-1 rounded-full ${badgeColors[status]}`}>
       {status}
     </span>
   );
 };
+
 
 export default TherapyDashboard;
