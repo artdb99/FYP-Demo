@@ -2,28 +2,28 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'r
 import { useUser } from './UserContext.jsx';
 import { useEffect, useState } from 'react';
 
-import SignIn from './pages/SignIn.jsx';
-import RegistrationForm from './pages/RegistrationForm.jsx';
+import SignIn from './features/auth/SignIn.jsx';
+import RegistrationForm from './features/auth/RegistrationForm.jsx';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
 import Chatbot from './pages/Chatbot';
-import PatientsList from './pages/PatientsList';
-import PatientProfile from './pages/PatientProfile';
-import UpdatePatient from './pages/UpdatePatient';
-import RiskDashboard from './pages/RiskDashboard';
-import RiskPredictionForm from './pages/RiskPredictionForm';
-import CreatePatient from './pages/CreatePatient';
-import TherapyDashboard from './pages/TherapyDashboard';
-import TherapyEffectivenessForm from './pages/TherapyEffectivenessForm';
-import TreatmentRecommendationDashboard from './pages/TreatmentRecommendationDashboard.jsx';
-import TreatmentRecommendationForm from './pages/TreatmentRecommendationForm';
-import AdminDashboard from './pages/AdminDashboard.jsx';
-import AdminPatients from './pages/AdminPatients.jsx';
-import SystemAnalytics from './pages/SystemAnalytics.jsx';
+import PatientsList from './features/patients/PatientsList.jsx';
+import PatientProfile from './features/patients/PatientProfile.jsx';
+import UpdatePatient from './features/patients/UpdatePatient.jsx';
+import RiskDashboard from './features/risk/RiskDashboard';
+import RiskPredictionForm from './features/risk/RiskPredictionForm';
+import CreatePatient from './features/patients/CreatePatient.jsx';
+import TherapyDashboard from './features/therapy/TherapyDashboard.jsx';
+import TherapyEffectivenessForm from './features/therapy/TherapyEffectivenessForm.jsx';
+import TreatmentRecommendationDashboard from './features/treatment/TreatmentRecommendationDashboard.jsx';
+import TreatmentRecommendationForm from './features/treatment/TreatmentRecommendationForm.jsx';
+import AdminDashboard from './features/admin/AdminDashboard.jsx';
+import AdminPatients from './features/admin/AdminPatients.jsx';
+import SystemAnalytics from './features/admin/SystemAnalytics.jsx';
+import ManageUsers from './features/admin/ManageUsers.jsx';
 
 
 import './App.css';
-import ManageUsers from './pages/ManageUsers.jsx';
 
 function App() {
   const { user } = useUser();

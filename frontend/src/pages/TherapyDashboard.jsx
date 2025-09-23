@@ -67,12 +67,14 @@ const TherapyDashboard = () => {
   const filteredPatients = patients.filter(p => {
     const name = p.name.toLowerCase();
     const status = getPatientStatus(p);
-    const insulin = p.insulin || '';
+    const insulin = (p.insulin_regimen_type || '').toString();
     const gender = p.gender || '';
 
     const matchesSearch = name.includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'All' || status === statusFilter;
-    const matchesInsulin = insulinFilter === 'All' || insulin === insulinFilter;
+    const matchesInsulin =
+      insulinFilter === 'All' ||
+      insulin.trim().toLowerCase() === insulinFilter.trim().toLowerCase();
     const matchesGender = genderFilter === 'All' || gender === genderFilter;
 
     return matchesSearch && matchesStatus && matchesInsulin && matchesGender;
@@ -84,7 +86,13 @@ const TherapyDashboard = () => {
   const visiblePatients = filteredPatients.slice(startIndex, startIndex + pageSize);
 
   // Unique insulin types and genders for filter options
-  const insulinTypes = Array.from(new Set(patients.map(p => p.insulin).filter(Boolean)));
+  const insulinTypes = Array.from(
+    new Set(
+      patients
+        .map(p => p.insulin_regimen_type)
+        .filter(Boolean)
+    )
+  );
   const genders = Array.from(new Set(patients.map(p => p.gender).filter(Boolean)));
 
   return (

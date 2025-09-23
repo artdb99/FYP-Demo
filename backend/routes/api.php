@@ -10,7 +10,6 @@ use App\Http\Controllers\ChatbotController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/predict', [RiskPredictionController::class, 'predict']);
 Route::post('/patients', [PatientController::class, 'store']);
 Route::post('/chatbot/message', [ChatbotController::class, 'message']);
 Route::put('/patients/{id}', [PatientController::class, 'update']);

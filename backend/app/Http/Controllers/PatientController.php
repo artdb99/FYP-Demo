@@ -5,36 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Patient;
 use Carbon\Carbon;
+use App\Http\Requests\StorePatientRequest;
+use App\Http\Requests\UpdatePatientRequest;
+use App\Http\Resources\PatientResource;
 
 class PatientController extends Controller
 {
-    public function store(Request $request)
+    public function store(StorePatientRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string',
-            'age' => 'nullable|integer',
-            'gender' => 'required|string',
-            'height_cm' => 'nullable|numeric|min:30|max:250',
-            'weight_kg' => 'nullable|numeric|min:10|max:400',
-            'physical_activity' => 'nullable|string',
-            'medicalHistory' => 'nullable|string',
-            'medications' => 'nullable|string',
-            'remarks' => 'nullable|string',
-            'insulinType' => 'nullable|string',
-            'fvg' => 'nullable|numeric',
-            'fvg_1' => 'nullable|numeric',
-            'fvg_2' => 'nullable|numeric',
-            'fvg_3' => 'nullable|numeric',
-            'hba1c1' => 'nullable|numeric',
-            'hba1c2' => 'nullable|numeric',
-            'hba1c3' => 'nullable|numeric',
-            'egfr' => 'nullable|numeric',
-            'dds_1' => 'nullable|numeric',
-            'dds_3' => 'nullable|numeric',
-            'first_visit_date' => 'nullable|date',
-            'second_visit_date' => 'nullable|date',
-            'third_visit_date' => 'nullable|date',
-        ]);
+        $validated = $request->validated();
 
         // Store raw input
         $patient = Patient::create([
@@ -75,6 +54,7 @@ class PatientController extends Controller
 
         $firstVisit = isset($validated['first_visit_date']) ? Carbon::parse($validated['first_visit_date']) : null;
         $secondVisit = isset($validated['second_visit_date']) ? Carbon::parse($validated['second_visit_date']) : null;
+        $thirdVisit = isset($validated['third_visit_date']) ? Carbon::parse($validated['third_visit_date']) : null;
 
         $patient->avg_fvg_1_2 = ($fvg1 !== null && $fvg2 !== null) ? ($fvg1 + $fvg2) / 2 : null;
         $patient->fvg_delta_1_2 = ($fvg2 !== null && $fvg1 !== null) ? ($fvg2 - $fvg1) : null;
@@ -83,8 +63,9 @@ class PatientController extends Controller
         $patient->reduction_a_per_day = ($hba1c1 !== null && $hba1c2 !== null && $firstVisit && $secondVisit)
             ? ($hba1c1 - $hba1c2) / max($firstVisit->diffInDays($secondVisit), 1)
             : null;
-        $patient->gap_from_initial_visit = ($hba1c1 !== null && $hba1c3 !== null) ? ($hba1c1 - $hba1c3) : null;
-        $patient->gap_from_first_clinical_visit = ($hba1c2 !== null && $hba1c3 !== null) ? ($hba1c2 - $hba1c3) : null;
+        // Gap fields should represent day differences between visits
+        $patient->gap_from_initial_visit = ($firstVisit && $thirdVisit) ? $firstVisit->diffInDays($thirdVisit) : null;
+        $patient->gap_from_first_clinical_visit = ($secondVisit && $thirdVisit) ? $secondVisit->diffInDays($thirdVisit) : null;
         $patient->dds_trend_1_3 = ($dds1 !== null && $dds3 !== null) ? ($dds3 - $dds1) : null;
 
         $patient->save();
@@ -92,33 +73,9 @@ class PatientController extends Controller
         return response()->json(['message' => 'Patient saved', 'data' => $patient], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdatePatientRequest $request, $id)
 {
-    $validated = $request->validate([
-        'name' => 'required|string',
-        'age' => 'nullable|integer',
-        'gender' => 'required|string',
-        'height_cm' => 'nullable|numeric|min:30|max:250',
-        'weight_kg' => 'nullable|numeric|min:10|max:400',
-        'physical_activity' => 'nullable|string',
-        'medicalHistory' => 'nullable|string',
-        'medications' => 'nullable|string',
-        'remarks' => 'nullable|string',
-        'insulinType' => 'nullable|string',
-        'fvg' => 'nullable|numeric',
-        'fvg_1' => 'nullable|numeric',
-        'fvg_2' => 'nullable|numeric',
-        'fvg_3' => 'nullable|numeric',
-        'hba1c1' => 'nullable|numeric',
-        'hba1c2' => 'nullable|numeric',
-        'hba1c3' => 'nullable|numeric',
-        'egfr' => 'nullable|numeric',
-        'dds_1' => 'nullable|numeric',
-        'dds_3' => 'nullable|numeric',
-        'first_visit_date' => 'nullable|date',
-        'second_visit_date' => 'nullable|date',
-        'third_visit_date' => 'nullable|date',
-    ]);
+    $validated = $request->validated();
 
     $patient = Patient::findOrFail($id);
 
@@ -158,6 +115,7 @@ class PatientController extends Controller
 
     $firstVisit = isset($validated['first_visit_date']) ? Carbon::parse($validated['first_visit_date']) : null;
     $secondVisit = isset($validated['second_visit_date']) ? Carbon::parse($validated['second_visit_date']) : null;
+    $thirdVisit = isset($validated['third_visit_date']) ? Carbon::parse($validated['third_visit_date']) : null;
 
     $patient->avg_fvg_1_2 = ($fvg1 !== null && $fvg2 !== null) ? ($fvg1 + $fvg2) / 2 : null;
     $patient->fvg_delta_1_2 = ($fvg2 !== null && $fvg1 !== null) ? ($fvg2 - $fvg1) : null;
@@ -166,8 +124,9 @@ class PatientController extends Controller
     $patient->reduction_a_per_day = ($hba1c1 !== null && $hba1c2 !== null && $firstVisit && $secondVisit)
         ? ($hba1c1 - $hba1c2) / max($firstVisit->diffInDays($secondVisit), 1)
         : null;
-    $patient->gap_from_initial_visit = ($hba1c1 !== null && $hba1c3 !== null) ? ($hba1c1 - $hba1c3) : null;
-    $patient->gap_from_first_clinical_visit = ($hba1c2 !== null && $hba1c3 !== null) ? ($hba1c2 - $hba1c3) : null;
+    // Gap fields should represent day differences between visits
+    $patient->gap_from_initial_visit = ($firstVisit && $thirdVisit) ? $firstVisit->diffInDays($thirdVisit) : null;
+    $patient->gap_from_first_clinical_visit = ($secondVisit && $thirdVisit) ? $secondVisit->diffInDays($thirdVisit) : null;
     $patient->dds_trend_1_3 = ($dds1 !== null && $dds3 !== null) ? ($dds3 - $dds1) : null;
 
     $patient->save();
@@ -176,9 +135,31 @@ class PatientController extends Controller
 }
 
 
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Patient::all());
+        $query = Patient::query();
+
+        // Optional filters
+        if ($request->filled('gender')) {
+            $query->where('gender', $request->input('gender'));
+        }
+        if ($request->filled('insulin')) {
+            $query->where('insulin_regimen_type', $request->input('insulin'));
+        }
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        // Backwards compatible: if no perPage, return full list as before
+        if (!$request->filled('perPage')) {
+            return response()->json($query->get());
+        }
+
+        $perPage = max((int) $request->input('perPage', 10), 1);
+        $patients = $query->paginate($perPage);
+
+        return PatientResource::collection($patients);
     }
 
     public function show($id)
@@ -189,7 +170,7 @@ class PatientController extends Controller
             return response()->json(['error' => 'Not found'], 404);
         }
 
-        return response()->json($patient);
+        return new PatientResource($patient);
     }
 
     public function getByUserId($user_id)
