@@ -1,15 +1,11 @@
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import pandas as pd
-import numpy as np
-import joblib
-from sentence_transformers import SentenceTransformer
-from pinecone import Pinecone
-import openai
-from groq import Groq
 import os
 from dotenv import load_dotenv
+import warnings
+import numpy as np
+import pandas as pd
 
 load_dotenv()
 
@@ -19,31 +15,107 @@ app = FastAPI()
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net"],
+    allow_origins=[
+        os.getenv("FRONTEND_ORIGIN", "http://localhost:5174"),
+        os.getenv("LARAVEL_ORIGIN", "https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net"),
+        "*",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load models
-model = joblib.load("ridge_best_model_1.pkl")
-therapy_pathline_model = joblib.load("therapy_effectiveness_model.pkl")
+# Suppress noisy sklearn warning about feature names mismatch
+warnings.filterwarnings(
+    "ignore",
+    message=r"X does not have valid feature names, but .* was fitted with feature names",
+)
 
-# RAG setup
-pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# --- Lazy-loaded resources ---
+_ridge_model = None
+_therapy_pathline_model = None
+_pinecone_client = None
+_pinecone_index = None
+_groq_client = None
+_embedder = None
 
-index = pc.Index("medicalbooks-1536")
+
+def get_ridge_model():
+    global _ridge_model
+    if _ridge_model is None:
+        import joblib
+        _ridge_model = joblib.load("ridge_best_model_1.pkl")
+    return _ridge_model
+
+
+def get_therapy_model():
+    global _therapy_pathline_model
+    if _therapy_pathline_model is None:
+        import joblib
+        _therapy_pathline_model = joblib.load("therapy_effectiveness_model.pkl")
+    return _therapy_pathline_model
+
+
+def get_pinecone_client():
+    global _pinecone_client
+    if _pinecone_client is None:
+        from pinecone import Pinecone
+        api_key = os.getenv("PINECONE_API_KEY")
+        if not api_key:
+            raise RuntimeError("PINECONE_API_KEY not set")
+        _pinecone_client = Pinecone(api_key=api_key)
+    return _pinecone_client
+
+
+def get_pinecone_index():
+    global _pinecone_index
+    if _pinecone_index is None:
+        pc = get_pinecone_client()
+        _pinecone_index = pc.Index("medicalbooks-1536")
+    return _pinecone_index
+
+
+def get_groq_client():
+    global _groq_client
+    if _groq_client is None:
+        from groq import Groq
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise RuntimeError("GROQ_API_KEY not set")
+        _groq_client = Groq(api_key=api_key)
+    return _groq_client
+
+
+def get_openai_client():
+    # Keep OpenAI lightweight; just set key on demand
+    import openai
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        openai.api_key = api_key
+    return openai
+
+
+def get_embedder():
+    global _embedder
+    if _embedder is None:
+        # Lazy import to avoid pulling torch/transformers at startup
+        from sentence_transformers import SentenceTransformer
+        _embedder = SentenceTransformer("all-MiniLM-L6-v2")
+    return _embedder
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 
 def get_openai_embedding(text: str) -> list:
     try:
-        print("🔍 Getting OpenAI embedding...")
+        openai = get_openai_client()
         response = openai.embeddings.create(
             model="text-embedding-3-small",
             input=[text]
         )
-        print("✅ Embedding received.")
         return response.data[0].embedding
     except Exception as e:
         print("❌ OpenAI Embedding Error:", e)
@@ -51,6 +123,7 @@ def get_openai_embedding(text: str) -> list:
 
 def retrieve_context(query, top_k=3):
     query_vec = get_openai_embedding(query)
+    index = get_pinecone_index()
     results = index.query(vector=query_vec, top_k=top_k, include_metadata=True)
 
     context_chunks = []
@@ -83,6 +156,7 @@ Instructions:
 - Mention insulin regimen (e.g. PBD) only if clearly stated in the context.
 """.strip()
 
+        groq_client = get_groq_client()
         response = groq_client.chat.completions.create(
             model="deepseek-r1-distill-llama-70b",
             messages=[{"role": "user", "content": prompt}],
@@ -104,6 +178,9 @@ Instructions:
 # Data models
 class PredictionRequest(BaseModel):
     features: list[float]
+
+class BulkPredictRequest(BaseModel):
+    rows: list[list[float]]
 
 class TreatmentRequest(BaseModel):
     patient: dict
@@ -134,9 +211,26 @@ class PatientData(BaseModel):
 # Routes
 @app.post("/predict")
 def predict(req: PredictionRequest):
-    input_data = np.array(req.features).reshape(1, -1)
-    prediction = model.predict(input_data)
-    return {"prediction": float(prediction[0])}
+    try:
+        m = get_ridge_model()
+        input_data = np.array(req.features, dtype=float).reshape(1, -1)
+        prediction = m.predict(input_data)
+        return {"prediction": float(prediction[0])}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
+
+
+@app.post("/predict-bulk")
+def predict_bulk(req: BulkPredictRequest):
+    try:
+        m = get_ridge_model()
+        if not req.rows:
+            return {"predictions": []}
+        X = np.array(req.rows, dtype=float)
+        y = m.predict(X)
+        return {"predictions": [float(v) for v in y]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Bulk prediction failed: {e}")
 
 @app.post("/rag")
 async def rag_query(request: Request):
@@ -222,9 +316,10 @@ def predict_therapy_pathline(data: PatientData):
         visits = [data.hba1c1, data.hba1c2, data.hba1c3]
         probabilities = []
 
+        tm = get_therapy_model()
         for val in visits:
             df['HbA1c1'] = [val]
-            prob = therapy_pathline_model.predict_proba(df)[0][1]
+            prob = tm.predict_proba(df)[0][1]
             probabilities.append(round(prob, 3))
 
         prob_text = "\n".join([f"Visit {i+1}: {p * 100:.1f}%" for i, p in enumerate(probabilities)])
@@ -254,7 +349,7 @@ def predict_therapy_pathline(data: PatientData):
     f"DDS scores: {data.dds1}, {data.dds3}\n"
         )
 
-        llm = groq_client.chat.completions.create(
+        llm = get_groq_client().chat.completions.create(
             model="deepseek-r1-distill-llama-70b",
             messages=[
                 {"role": "system", "content": "You are a helpful medical AI assistant."},
@@ -265,8 +360,8 @@ def predict_therapy_pathline(data: PatientData):
         full_reply = llm.choices[0].message.content
         insight = full_reply.split("</think>")[-1].strip() if "</think>" in full_reply else full_reply.strip()
 
-        feature_names = therapy_pathline_model.named_steps['preprocessor'].get_feature_names_out()
-        importances = therapy_pathline_model.named_steps['classifier'].feature_importances_
+        feature_names = tm.named_steps['preprocessor'].get_feature_names_out()
+        importances = tm.named_steps['classifier'].feature_importances_
         sorted_features = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
         top_factors = [{"feature": name, "importance": round(score, 4)} for name, score in sorted_features[:5]]
 
