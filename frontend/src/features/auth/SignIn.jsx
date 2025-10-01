@@ -41,14 +41,14 @@ const SignIn = () => {
   return (
     <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-green-600 to-teal-600 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg mx-4">
-        <h2 className="text-3xl font-bold text-center text-purple-700 dark:text-purple-400 mb-1">Welcome Back</h2>
+        <img src="/biotective-logo.png" alt="BIOTECTIVE" className="h-16 object-contain mx-auto mb-1" />
         <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-6">Sign in to your account</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email address</label>
             <input
-              type="email"
+              type="email"     
               id="email"
               className="w-full mt-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
               placeholder="you@example.com"
