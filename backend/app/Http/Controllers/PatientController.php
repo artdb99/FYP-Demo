@@ -41,6 +41,7 @@ class PatientController extends Controller
             'second_visit_date' => $validated['second_visit_date'] ?? null,
             'third_visit_date' => $validated['third_visit_date'] ?? null,
             'user_id' => $request->has('user_id') ? $request->input('user_id') : null, // 👈 Only assign if explicitly sent
+            'assigned_doctor_id' => $request->input('assigned_doctor_id'),
         ]);
 
         // Calculate derived fields
@@ -150,6 +151,9 @@ class PatientController extends Controller
             $search = $request->input('search');
             $query->where('name', 'like', "%{$search}%");
         }
+        if ($request->filled('doctor_id')) {
+            $query->where('assigned_doctor_id', (int) $request->input('doctor_id'));
+        }
 
         // Backwards compatible: if no perPage, return full list as before
         if (!$request->filled('perPage')) {
@@ -160,6 +164,18 @@ class PatientController extends Controller
         $patients = $query->paginate($perPage);
 
         return PatientResource::collection($patients);
+    }
+
+    // Admin: assign a patient to a doctor
+    public function assignDoctor(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'doctor_id' => 'nullable|integer|exists:users,id',
+        ]);
+        $patient = Patient::findOrFail($id);
+        $patient->assigned_doctor_id = $validated['doctor_id'] ?? null;
+        $patient->save();
+        return response()->json(['message' => 'Assignment updated', 'data' => $patient]);
     }
 
     public function show($id)

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useUser } from '../UserContext';
+import { useUser } from '@/UserContext.jsx';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -49,7 +49,7 @@ function Chatbot() {
 
     useEffect(() => {
         if (user?.id) {
-            const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
+            const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://127.0.0.1:8000";
             fetch(`${laravelUrl}/api/patients/by-user/${user.id}`)
                 .then(res => res.json())
                 .then(data => setPatient(data))

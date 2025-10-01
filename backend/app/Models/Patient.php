@@ -8,6 +8,7 @@ class Patient extends Model
 {
     protected $fillable = [
     'user_id',
+    'assigned_doctor_id',
     'name', 'age', 'gender', 'medical_history', 'medications', 'remarks',
     'insulin_regimen_type', 'fvg', 'fvg_1', 'fvg_2', 'fvg_3',
     'hba1c_1st_visit', 'hba1c_2nd_visit', 'hba1c_3rd_visit',
@@ -46,5 +47,10 @@ class Patient extends Model
         if ($bmi < 25)   return 'Normal';
         if ($bmi < 30)   return 'Overweight';
         return 'Obese';
+    }
+
+    public function assignedDoctor()
+    {
+        return $this->belongsTo(User::class, 'assigned_doctor_id');
     }
 }

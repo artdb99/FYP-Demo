@@ -1,3 +1,50 @@
+import os
+import sqlite3
+import hashlib
+import json
+# ---- Simple SQLite cache helpers ----
+_db_path = os.getenv("PREDICTION_CACHE_DB", "prediction_cache.sqlite")
+
+def _get_db_conn():
+    conn = sqlite3.connect(_db_path)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS prediction_cache (
+            key TEXT PRIMARY KEY,
+            value REAL NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    # For bulk endpoint we may also store vectors row-wise using same table per-row
+    return conn
+
+def _features_key(features: list[float]) -> str:
+    # Create a stable key from input list
+    payload = json.dumps([float(x) for x in features], separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+def cache_get(features: list[float]):
+    try:
+        key = _features_key(features)
+        with _get_db_conn() as conn:
+            cur = conn.execute("SELECT value FROM prediction_cache WHERE key = ?", (key,))
+            row = cur.fetchone()
+            return None if row is None else float(row[0])
+    except Exception:
+        return None
+
+def cache_set(features: list[float], value: float):
+    try:
+        key = _features_key(features)
+        with _get_db_conn() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO prediction_cache (key, value) VALUES (?, ?)",
+                (key, float(value)),
+            )
+    except Exception:
+        pass
+
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +53,9 @@ from dotenv import load_dotenv
 import warnings
 import numpy as np
 import pandas as pd
+import sqlite3
+import hashlib
+import json
 
 load_dotenv()
 
@@ -212,10 +262,16 @@ class PatientData(BaseModel):
 @app.post("/predict")
 def predict(req: PredictionRequest):
     try:
+        # Check cache first
+        cached = cache_get(req.features)
+        if cached is not None:
+            return {"prediction": cached, "cached": True}
+
         m = get_ridge_model()
         input_data = np.array(req.features, dtype=float).reshape(1, -1)
-        prediction = m.predict(input_data)
-        return {"prediction": float(prediction[0])}
+        prediction = float(m.predict(input_data)[0])
+        cache_set(req.features, prediction)
+        return {"prediction": prediction, "cached": False}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
 
@@ -226,9 +282,29 @@ def predict_bulk(req: BulkPredictRequest):
         m = get_ridge_model()
         if not req.rows:
             return {"predictions": []}
-        X = np.array(req.rows, dtype=float)
-        y = m.predict(X)
-        return {"predictions": [float(v) for v in y]}
+
+        predictions: list[float] = []
+        rows_to_compute: list[tuple[int, list[float]]] = []
+
+        # Try cache for each row
+        for idx, row in enumerate(req.rows):
+            cached = cache_get(row)
+            if cached is None:
+                rows_to_compute.append((idx, row))
+                predictions.append(None)  # placeholder
+            else:
+                predictions.append(cached)
+
+        # Compute missing ones in a batch if any
+        if rows_to_compute:
+            X = np.array([r for _, r in rows_to_compute], dtype=float)
+            y = m.predict(X)
+            for (pos, row), y_val in zip(rows_to_compute, y):
+                y_float = float(y_val)
+                predictions[pos] = y_float
+                cache_set(row, y_float)
+
+        return {"predictions": predictions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Bulk prediction failed: {e}")
 

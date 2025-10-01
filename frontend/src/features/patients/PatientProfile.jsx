@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useUser } from '../../UserContext';
+import { useUser } from '@/UserContext.jsx';
 import { useParams } from 'react-router-dom';
 import Chart from 'chart.js/auto';
 import { patientsApi } from '../../api/patients';
@@ -138,7 +138,7 @@ const PatientProfile = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 space-y-10 bg-white text-gray-800">
+    <div className="max-w-7xl mx-auto px-6 py-10 space-y-10 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
       <div className="grid md:grid-cols-3 gap-6">
         <div className="bg-teal-50 border border-teal-200 shadow-lg rounded-xl p-6 text-center space-y-4">
           <img
@@ -229,7 +229,7 @@ const PatientProfile = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-6">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
             <h4 className="text-gray-700 font-semibold mb-2">HbA1c Progress</h4>
             <canvas ref={chartRef} height={150}></canvas>
           </div>
@@ -259,7 +259,7 @@ const PatientProfile = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-6 md:col-span-2">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow p-6 md:col-span-2 border border-gray-200 dark:border-gray-700">
           <h4 className="text-gray-700 font-semibold mb-4">Visit Summary</h4>
           <div className="grid md:grid-cols-3 gap-4">
             <VisitCard visit="Visit 1" hba1c={patient.hba1c_1st_visit} fvg={patient.fvg_1} dds={patient.dds_1} />

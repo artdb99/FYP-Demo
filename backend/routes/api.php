@@ -25,6 +25,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/patients', [PatientController::class, 'index']);
     Route::delete('/patients/{id}', [PatientController::class, 'destroy']);
+    Route::patch('/patients/{id}/assign-doctor', [PatientController::class, 'assignDoctor']);
     Route::put('/users/{id}', [UserController::class, 'update']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
 });

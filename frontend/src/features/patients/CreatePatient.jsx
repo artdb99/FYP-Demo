@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useUser } from '@/UserContext.jsx';
 
 const CreatePatient = () => {
+  const { user } = useUser();
+  const [doctors, setDoctors] = useState([]);
+  const [assignedDoctorId, setAssignedDoctorId] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -56,6 +61,13 @@ const CreatePatient = () => {
       third_visit_date: formData.third_visit_date
     };
 
+    // Assignment logic
+    if (user?.role === 'doctor') {
+      enrichedData.assigned_doctor_id = user.id;
+    } else if (user?.role === 'admin' && assignedDoctorId) {
+      enrichedData.assigned_doctor_id = Number(assignedDoctorId);
+    }
+
     try {
       const laravelUrl = import.meta.env.VITE_LARAVEL_URL || "http://localhost:8000";
       const res = await fetch(`${laravelUrl}/api/patients`, {
@@ -73,6 +85,22 @@ const CreatePatient = () => {
     }
   };
 
+  // Load doctors for admin assignment
+  useEffect(() => {
+    const loadDoctors = async () => {
+      if (user?.role !== 'admin') return;
+      try {
+        const laravelUrl = import.meta.env.VITE_LARAVEL_URL || 'http://localhost:8000';
+        const res = await fetch(`${laravelUrl}/api/admin/users`);
+        const data = await res.json();
+        setDoctors((data || []).filter(u => u.role === 'doctor'));
+      } catch (e) {
+        console.error('Failed to load doctors', e);
+      }
+    };
+    loadDoctors();
+  }, [user]);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-10">
       <div className="bg-indigo-500 text-white rounded-lg p-6 mb-8">
@@ -81,6 +109,28 @@ const CreatePatient = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+
+        {/* Assignment (Admin only) */}
+        {user?.role === 'admin' && (
+          <section className="bg-amber-50 p-6 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4 text-amber-700">👩‍⚕️ Assign to Doctor (optional)</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+                <select
+                  className="w-full border border-gray-300 rounded px-3 py-2 bg-white"
+                  value={assignedDoctorId}
+                  onChange={(e) => setAssignedDoctorId(e.target.value)}
+                >
+                  <option value="">Unassigned</option>
+                  {doctors.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Basic Info */}
         <section className="bg-blue-50 p-6 rounded-lg shadow-md">

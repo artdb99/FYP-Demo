@@ -14,9 +14,17 @@ export const patientsApi = {
     }
     return { data: res.data.data, meta: res.data.meta };
   },
+  async create(payload) {
+    const res = await laravelClient.post('/patients', payload);
+    return res.data;
+  },
   async getById(id) {
     const res = await laravelClient.get(`/patients/${id}`);
     // Laravel Resource wraps single items in { data: {...} }
     return res.data?.data ?? res.data;
+  },
+  async assignDoctor(patientId, doctorId) {
+    const res = await laravelClient.patch(`/admin/patients/${patientId}/assign-doctor`, { doctor_id: doctorId });
+    return res.data;
   },
 };

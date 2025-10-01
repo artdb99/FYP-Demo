@@ -48,6 +48,7 @@ class PatientResource extends JsonResource
             'gap_from_first_clinical_visit' => $this->gap_from_first_clinical_visit,
             'dds_trend_1_3' => $this->dds_trend_1_3,
             'user_id' => $this->user_id,
+            'assigned_doctor_id' => $this->assigned_doctor_id,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

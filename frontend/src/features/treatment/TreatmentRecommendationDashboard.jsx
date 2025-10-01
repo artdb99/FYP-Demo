@@ -46,16 +46,6 @@ const TreatmentRecommendationDashboard = () => {
         </div>
       </header>
 
-      <div className="flex justify-between items-center mb-4">
-        <input
-          type="text"
-          placeholder="Search patient..."
-          className="border border-gray-300 bg-white text-gray-900 placeholder-gray-500 rounded px-4 py-2 w-1/3 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((p) => (
           <Link

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser } from "@/UserContext";
+import { useUser } from "@/UserContext.jsx";
 
 const RegistrationForm = () => {
   const [role, setRole] = useState("");
@@ -65,50 +65,66 @@ const RegistrationForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="min-h-screen w-full p-8 bg-white flex flex-col justify-center">
-      <h2 className="text-2xl font-bold text-blue-600 mb-4">Healthcare Portal Registration</h2>
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <RoleButton role="admin" current={role} onClick={handleRoleSelection} color="blue" />
-        <RoleButton role="doctor" current={role} onClick={handleRoleSelection} color="green" />
-        <RoleButton role="patient" current={role} onClick={handleRoleSelection} color="purple" />
-      </div>
+    <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-br from-green-600 to-teal-600 dark:from-gray-900 dark:to-gray-800">
+      <div className="w-full max-w-3xl bg-white dark:bg-gray-900 p-8 md:p-10 rounded-xl shadow-lg mx-4">
+        <h2 className="text-3xl font-bold text-center text-purple-700 dark:text-purple-400 mb-1">Create your account</h2>
+        <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-6">Join the healthcare portal to manage and view health insights</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input label="First Name" value={firstName} onChange={setFirstName} required />
-        <Input label="Last Name" value={lastName} onChange={setLastName} required />
-        <div>
-          <label className="block text-gray-600">Gender</label>
-          <select
-            className="w-full p-3 border border-gray-300 rounded-lg"
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            required
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <RoleButton role="admin" current={role} onClick={handleRoleSelection} color="blue" />
+            <RoleButton role="doctor" current={role} onClick={handleRoleSelection} color="green" />
+            <RoleButton role="patient" current={role} onClick={handleRoleSelection} color="purple" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input label="First Name" value={firstName} onChange={setFirstName} required />
+            <Input label="Last Name" value={lastName} onChange={setLastName} required />
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Gender</label>
+              <select
+                className="w-full mt-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                required
+              >
+                <option value="">Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <Input label="Email" type="email" value={email} onChange={setEmail} required />
+            <Input label="Phone" value={phone} onChange={setPhone} required />
+            <Input label="Date of Birth" type="date" value={dob} onChange={setDob} required />
+            <Input label="Password" type="password" value={password} onChange={setPassword} required />
+            <Input label="Confirm Password" type="password" value={confirmPassword} onChange={setConfirmPassword} required />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-500 text-white py-2 rounded-md font-semibold hover:opacity-90 shadow transition"
           >
-            <option value="">Select gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
+            Create account
+          </button>
 
-        <Input label="Email" type="email" value={email} onChange={setEmail} required />
-        <Input label="Phone" value={phone} onChange={setPhone} required />
-        <Input label="Date of Birth" type="date" value={dob} onChange={setDob} required />
-        <Input label="Password" type="password" value={password} onChange={setPassword} required />
-        <Input label="Confirm Password" type="password" value={confirmPassword} onChange={setConfirmPassword} required />
+          <p className="text-center text-sm text-gray-700 dark:text-gray-300">
+            Already have an account? <a href="/" className="text-purple-600 dark:text-purple-400 hover:underline font-medium">Sign in</a>
+          </p>
+        </form>
       </div>
-
-      <button type="submit" className="w-full p-3 bg-blue-600 text-white rounded-lg mt-6">Register</button>
-    </form>
+    </div>
   );
 };
 
 const Input = ({ label, value, onChange, type = "text", required = false }) => (
   <div>
-    <label className="block text-gray-600">{label}</label>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
     <input
       type={type}
-      className="w-full p-3 border border-gray-300 rounded-lg"
+      className="w-full mt-1 px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       required={required}
@@ -116,21 +132,30 @@ const Input = ({ label, value, onChange, type = "text", required = false }) => (
   </div>
 );
 
-const RoleButton = ({ role, current, onClick, color }) => (
-  <button
-    type="button"
-    onClick={() => onClick(role)}
-    className={`p-4 text-center border rounded-lg ${current === role ? `bg-${color}-200` : "hover:bg-gray-200"}`}
-  >
-    <div className={`text-${color}-600 capitalize`}>{role}</div>
-    <div className="text-sm">
-      {role === "admin"
-        ? "Manage the healthcare system"
-        : role === "doctor"
-          ? "Provide medical care"
-          : "Access your health records"}
-    </div>
-  </button>
-);
+const RoleButton = ({ role, current, onClick, color }) => {
+  const colorStyles = {
+    blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
+    green: { bg: 'bg-green-100', text: 'text-green-600' },
+    purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
+  };
+  const selected = current === role;
+  const styles = colorStyles[color] || colorStyles.blue;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(role)}
+      className={`p-4 text-center border rounded-lg transition ${selected ? styles.bg : 'hover:bg-gray-100'}`}
+    >
+      <div className={`${styles.text} capitalize font-medium`}>{role}</div>
+      <div className="text-sm text-gray-600 dark:text-gray-400">
+        {role === "admin"
+          ? "Manage the healthcare system"
+          : role === "doctor"
+            ? "Provide medical care"
+            : "Access your health records"}
+      </div>
+    </button>
+  );
+};
 
 export default RegistrationForm;
