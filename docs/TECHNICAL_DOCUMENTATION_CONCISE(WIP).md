@@ -1,5 +1,25 @@
 # Project Technical Documentation (Concise)
 
+## 0) Vision of the System
+- **Final Look (End-state experience)**
+  - A modern, responsive web app with a role-aware sidebar and clean content cards.
+  - Landing views that are informative at a glance (risk distribution, recent activity), with drill‑downs to detailed patient pages.
+  - Clear visual language: consistent typography, color semantics for risk, compact data tiles, and accessible components.
+  - Seamless navigation between Patients, Risk, Therapy, and Treatment sections with minimal perceived latency.
+
+- **Functional Vision (What it does)**
+  - Patient management: create, update, search, and filter patients; view longitudinal metrics and trends.
+  - Risk intelligence: surface risk categories and scores per patient and in aggregate, with explanatory factors.
+  - Therapy insights: show effectiveness probabilities over visits and concise rationale to support decisions.
+  - Clinical assistance: provide grounded Q&A using patient context and medical literature (RAG), with auditable prompts and outputs.
+  - Role-driven UX: doctors manage panels and predictions; patients see their profile and guidance; admins govern access.
+
+- **Quality Vision (How it feels)**
+  - Perceived instant loads for common views via caching and progressive rendering.
+  - Accessible by default (keyboard nav, color contrast, ARIA labelling), and responsive from mobile to desktop.
+  - Secure and auditable: role indicators are visible, actions are attributable, and sensitive operations are protected.
+  - Configurable and testable: thresholds, colors, and model versions are centralized and version‑controlled.
+
 ## 1) System Overview
 - **Purpose**
   - A patient management platform that combines operational data (patients, visits, labs) with AI-assisted insights to support safer, faster, and more consistent clinical decisions.
@@ -143,3 +163,98 @@ flowchart LR
   - `npm install` in `frontend/`
   - `npm run dev`
   - In production, SPA is built by CI into `backend/public/`.
+
+## 11) Non-Functional Requirements (NFRs)
+- **Performance**
+  - Common views render meaningful content within 300ms on cache hit; background refresh completes within ~2s.
+  - Bulk dashboards update incrementally; no page‑wide blocking on long computations.
+- **Reliability & Resilience**
+  - Graceful degradation when external providers fail; clear user messaging and retry strategies.
+  - Health checks exposed; errors logged with correlation IDs.
+- **Security & Roles**
+  - Role‑based navigation and indicators visible in UI (e.g., doctor/patient/admin badge).
+  - Backend authorization on sensitive endpoints; least‑privilege access.
+  - Secrets only in server environments; no secrets in the client bundle.
+- **Accessibility (A11y)**
+  - Keyboard navigation, focus states, ARIA labels, and color contrast meet WCAG AA for critical screens.
+- **Privacy & Auditability**
+  - Audit logs for prediction requests and key clinical actions (viewed/updated patient data, generated insights).
+  - Model versions attached to results; inputs hashed/fingerprinted for traceability.
+- **Maintainability & Configurability**
+  - Risk thresholds, gradient stops, and color tokens centralized; no hardcoded values in components.
+  - Predict endpoints versioned; deprecation policy for old versions.
+
+## 12) Recent Changes Summary (Oct 2025)
+- **Risk Prediction caching** (`backend/fastapi/main.py`)
+  - Feature-hash key includes `patient_id` and `model_version`.
+  - Added lightweight SQLite K/V table `prediction_cache.sqlite` for cache and a second key for latest-per-patient: `latest:<patient_id>:<version>`.
+- **SWR for Risk Dashboard**
+  - New endpoint `POST /risk-dashboard` returns cached value immediately; on miss returns latest with `stale: true` and triggers background recompute.
+  - `frontend/src/features/risk/RiskDashboard.jsx` sends per-patient calls in parallel and updates each card as soon as it completes.
+- **Risk Prediction view UX**
+  - `frontend/src/features/risk/RiskPredictionForm.jsx` no longer blocks the whole page; fetches risk in background and shows “Updating…” if stale.
+- **Gauge/UI**
+  - Center badge drawn inside SVG; larger radius and stroke; better alignment.
+- **Auth**
+  - Removed login debug alerts in `SignIn.jsx`.
+
+## 13) Product Backlog (Epics → Stories)
+
+### Epic A: Risk Dashboard Performance & UX
+- **[Done] Parallel per-patient updates**
+  - Code: `RiskDashboard.jsx` uses `/risk-dashboard?force=false`, updates `riskResults` per response.
+- **Show stale badge per card**
+  - AC: If `res.data.stale === true`, show subtle “Updating…” next to `RiskBadge`; hides when fresh.
+  - Priority: High | Effort: S
+- **Warm cache on patient metric update (backend)**
+  - AC: On metric change, recompute in background and update both caches; next dashboard load is instant.
+  - Priority: Medium | Effort: M
+
+### Epic B: Risk Prediction View polish
+- **[Done] Non-blocking render + SWR**
+  - Code: `RiskPredictionForm.jsx` background-fetch with polling when stale.
+- **Extract risk constants**
+  - AC: thresholds, color tokens, gradient stops in `frontend/src/features/risk/config.js`; no hardcoding in components.
+  - Priority: Medium | Effort: S
+
+### Epic C: Backend caching & durability
+- **[Done] SQLite cache + latest-per-patient**
+  - Keys: exact feature-hash and `latest:<patient_id>:<version>`.
+- **Historical audit table (optional)**
+  - AC: `risk_predictions` table with `(patient_id, features_hash, model_version, prediction, created_at)` + composite index.
+  - Priority: Low | Effort: M
+- **Redis integration (optional)**
+  - AC: Drop-in Redis for faster cache; SQLite remains fallback.
+  - Priority: Low | Effort: M
+
+### Epic D: Treatment & Insights
+- **Align key factor logic**
+  - AC: Backend-generated `key_factors` conforms to the same rules used in the frontend display.
+  - Priority: Medium | Effort: S
+
+### Epic E: Auth & Security
+- **Backend role guard**
+  - AC: Protect ML endpoints so only authenticated roles can call; log user/patient context for audit.
+  - Priority: Medium | Effort: M
+
+### Epic F: Docs & Ops
+- **Technical docs consolidation**
+  - AC: Vision, NFRs, architecture, recent changes, backlog (this document) are maintained and versioned.
+  - Priority: High | Effort: S
+
+## 14) Acceptance Criteria (selected)
+- **Dashboard card update**
+  - Given a patient with a cached prediction, when the dashboard loads, then their card shows a risk label within 300ms.
+  - Given a patient whose features changed, first response shows last value with “Updating…”, and updates to fresh within 2s.
+- **Prediction view**
+  - The page renders layout immediately; the gauge displays stale value if needed and updates without full reload.
+
+## 15) Deployment & Operational Notes
+- **Assets/logo**
+  - Logo is served from `frontend/public/biotective-logo.png` and referenced as `/biotective-logo.png`. If deploying under a subpath, use `import.meta.env.BASE_URL + 'biotective-logo.png'`.
+- **Environment variables**
+  - Frontend: Vite `import.meta.env` for API base URLs.
+  - Backend FastAPI: set keys in the hosting provider’s env (Render).
+- **Observability**
+  - Add logs for cache hits/misses on `/risk-dashboard` to monitor effectiveness.
+

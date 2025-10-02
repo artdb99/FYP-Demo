@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { patientsApi } from '../../api/patients';
 import { fastApiClient } from '../../api/client';
@@ -8,15 +8,20 @@ function RiskPredictionForm() {
   const { id } = useParams();
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // initial page skeleton only
+  const [riskStale, setRiskStale] = useState(false);
+  const pollAttemptsRef = useRef(0);
   const [patientData, setPatientData] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchPatientAndPredict() {
       try {
         const data = await patientsApi.getById(id);
+        if (cancelled) return;
         setPatientData(data);
 
         const features = [
@@ -30,18 +35,39 @@ function RiskPredictionForm() {
 
         if (features.some(val => isNaN(val))) {
           setError('Invalid or missing input data.');
-          setLoading(false);
+          setLoading(false); // stop page skeleton
           return;
         }
 
-        const predictionRes = await fastApiClient.post('/predict', { features });
-        const numericRisk = parseFloat(predictionRes.data.prediction);
-        const riskLabel = mapNumericRisk(numericRisk);
-        const riskColor = getRiskColor(riskLabel);
-
-        setResult({ value: numericRisk.toFixed(2), label: riskLabel, color: riskColor, raw: numericRisk });
-        setLastUpdated(new Date().toLocaleString());
+        // Show page immediately; risk fetch runs in background
         setLoading(false);
+
+        const doFetchRisk = async () => {
+          if (cancelled) return;
+          const predictionRes = await fastApiClient.post('/risk-dashboard?force=false', {
+            features,
+            patient_id: Number(id),
+            model_version: 'risk_v1',
+            patient: data,
+          });
+          if (cancelled) return;
+          const numericRisk = parseFloat(predictionRes.data.prediction);
+          const riskLabel = predictionRes.data.risk_label || mapNumericRisk(numericRisk);
+          const riskColor = getRiskColor(riskLabel);
+          setResult({ value: numericRisk.toFixed(2), label: riskLabel, color: riskColor, raw: numericRisk });
+          setLastUpdated(new Date().toLocaleString());
+          const stale = Boolean(predictionRes.data.stale);
+          setRiskStale(stale);
+          if (stale && pollAttemptsRef.current < 10) {
+            pollAttemptsRef.current += 1;
+            setTimeout(doFetchRisk, 1200);
+          } else if (!stale) {
+            pollAttemptsRef.current = 0;
+          }
+        };
+
+        // initial risk fetch (non-blocking)
+        doFetchRisk();
       } catch (err) {
         setError('Failed to fetch or predict.');
         setLoading(false);
@@ -49,6 +75,7 @@ function RiskPredictionForm() {
     }
 
     fetchPatientAndPredict();
+    return () => { cancelled = true; };
   }, [id, reloadKey]);
 
   const mapNumericRisk = (val) => {
@@ -155,7 +182,7 @@ function RiskPredictionForm() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => { setLoading(true); setError(null); setReloadKey(k=>k+1); }}
+            onClick={() => { setError(null); setReloadKey(k=>k+1); pollAttemptsRef.current = 0; }}
             className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-md border border-white/20"
             title="Refresh prediction"
           >
@@ -267,6 +294,9 @@ function RiskPredictionForm() {
               <span className={`font-semibold px-2 py-0.5 rounded-full ring-2 ${result?.color}`}>
                 {result?.label}
               </span>
+              {riskStale && (
+                <span className="text-[11px] text-gray-500">Updating…</span>
+              )}
             </div>
 
             {/* Insight chips */}

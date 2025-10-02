@@ -57,9 +57,10 @@ const RiskDashboard = () => {
     });
   }, []);
 
-  const runPredictions = async (data) => {
-    const results = {};
-    for (const patient of data) {
+  const runPredictions = (data) => {
+    // Reset results and fire all requests in parallel; update as each completes
+    setRiskResults({});
+    data.forEach((patient) => {
       const features = [
         parseFloat(patient.hba1c_1st_visit),
         parseFloat(patient.hba1c_2nd_visit),
@@ -69,21 +70,26 @@ const RiskDashboard = () => {
         parseFloat(patient.reduction_a),
       ];
 
-      // Skip invalid
-      if (features.some((val) => isNaN(val))) continue;
+      if (features.some((val) => isNaN(val))) return; // skip invalid
 
-      try {
-        const res = await fastApiClient.post('/predict', { features });
-        const rawValue = parseFloat(res.data.prediction);
-        const value = rawValue.toFixed(2);
-        const label = mapNumericRisk(rawValue);
-        results[patient.id] = { value, label };
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(`Prediction failed for ${patient.name}`);
-      }
-    }
-    setRiskResults(results);
+      fastApiClient
+        .post('/risk-dashboard?force=false', {
+          features,
+          patient_id: Number(patient.id),
+          model_version: 'risk_v1',
+          patient,
+        })
+        .then((res) => {
+          const rawValue = parseFloat(res.data.prediction);
+          const value = Number.isFinite(rawValue) ? rawValue.toFixed(2) : '—';
+          const label = res.data.risk_label || mapNumericRisk(rawValue);
+          setRiskResults((prev) => ({ ...prev, [patient.id]: { value, label } }));
+        })
+        .catch(() => {
+          // eslint-disable-next-line no-console
+          console.error(`Prediction failed for ${patient.name}`);
+        });
+    });
   };
 
   useEffect(() => {

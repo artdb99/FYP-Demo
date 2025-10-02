@@ -21,7 +21,6 @@ const SignIn = () => {
       });
 
       const data = await response.json();
-      alert(data.message);
 
       if (response.ok) {
         const { role, id, name } = data.user;
@@ -34,7 +33,6 @@ const SignIn = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      alert('Failed to sign in. The API might not be implemented yet.');
     }
   };
 

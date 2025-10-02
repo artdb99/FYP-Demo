@@ -19,14 +19,30 @@ def _get_db_conn():
     # For bulk endpoint we may also store vectors row-wise using same table per-row
     return conn
 
-def _features_key(features: list[float]) -> str:
-    # Create a stable key from input list
-    payload = json.dumps([float(x) for x in features], separators=(",", ":"))
+def _features_key(
+    features: list[float],
+    patient_id: int | None = None,
+    model_version: str = "risk_v1",
+) -> str:
+    """Create a stable cache key from inputs + optional patient and model version.
+
+    Including patient_id and model_version ensures keys change when either
+    the inputs (features), the patient, or the model changes.
+    """
+    payload = json.dumps(
+        {
+            "v": model_version,
+            "pid": patient_id,
+            "f": [float(x) for x in features],
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
-def cache_get(features: list[float]):
+def cache_get(features: list[float], patient_id: int | None = None, model_version: str = "risk_v1"):
     try:
-        key = _features_key(features)
+        key = _features_key(features, patient_id=patient_id, model_version=model_version)
         with _get_db_conn() as conn:
             cur = conn.execute("SELECT value FROM prediction_cache WHERE key = ?", (key,))
             row = cur.fetchone()
@@ -34,9 +50,34 @@ def cache_get(features: list[float]):
     except Exception:
         return None
 
-def cache_set(features: list[float], value: float):
+def cache_set(features: list[float], value: float, patient_id: int | None = None, model_version: str = "risk_v1"):
     try:
-        key = _features_key(features)
+        key = _features_key(features, patient_id=patient_id, model_version=model_version)
+        with _get_db_conn() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO prediction_cache (key, value) VALUES (?, ?)",
+                (key, float(value)),
+            )
+    except Exception:
+        pass
+
+# ---- Latest-per-patient helpers (SWR) ----
+def _latest_key(patient_id: int | None, model_version: str) -> str:
+    return f"latest:{patient_id or 'na'}:{model_version}"
+
+def latest_get(patient_id: int | None, model_version: str = "risk_v1") -> float | None:
+    try:
+        key = _latest_key(patient_id, model_version)
+        with _get_db_conn() as conn:
+            cur = conn.execute("SELECT value FROM prediction_cache WHERE key = ?", (key,))
+            row = cur.fetchone()
+            return None if row is None else float(row[0])
+    except Exception:
+        return None
+
+def latest_set(patient_id: int | None, value: float, model_version: str = "risk_v1") -> None:
+    try:
+        key = _latest_key(patient_id, model_version)
         with _get_db_conn() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO prediction_cache (key, value) VALUES (?, ?)",
@@ -228,6 +269,8 @@ Instructions:
 # Data models
 class PredictionRequest(BaseModel):
     features: list[float]
+    patient_id: int | None = None
+    model_version: str | None = None
 
 class BulkPredictRequest(BaseModel):
     rows: list[list[float]]
@@ -258,20 +301,29 @@ class PatientData(BaseModel):
     dds3: float
     dds_trend_1_3: float
 
+class DashboardRequest(BaseModel):
+    features: list[float]
+    patient_id: int | None = None
+    model_version: str | None = None
+    patient: dict | None = None  # optional; used for key factor strings
+
 # Routes
 @app.post("/predict")
-def predict(req: PredictionRequest):
+def predict(req: PredictionRequest, force: bool = False):
     try:
-        # Check cache first
-        cached = cache_get(req.features)
-        if cached is not None:
-            return {"prediction": cached, "cached": True}
+        model_version = req.model_version or "risk_v1"
+
+        # Check cache first (unless force recompute)
+        if not force:
+            cached = cache_get(req.features, patient_id=req.patient_id, model_version=model_version)
+            if cached is not None:
+                return {"prediction": cached, "cached": True, "model_version": model_version}
 
         m = get_ridge_model()
         input_data = np.array(req.features, dtype=float).reshape(1, -1)
         prediction = float(m.predict(input_data)[0])
-        cache_set(req.features, prediction)
-        return {"prediction": prediction, "cached": False}
+        cache_set(req.features, prediction, patient_id=req.patient_id, model_version=model_version)
+        return {"prediction": prediction, "cached": False, "model_version": model_version}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
 
@@ -288,7 +340,7 @@ def predict_bulk(req: BulkPredictRequest):
 
         # Try cache for each row
         for idx, row in enumerate(req.rows):
-            cached = cache_get(row)
+            cached = cache_get(row, patient_id=None, model_version="risk_v1")
             if cached is None:
                 rows_to_compute.append((idx, row))
                 predictions.append(None)  # placeholder
@@ -302,11 +354,119 @@ def predict_bulk(req: BulkPredictRequest):
             for (pos, row), y_val in zip(rows_to_compute, y):
                 y_float = float(y_val)
                 predictions[pos] = y_float
-                cache_set(row, y_float)
+                cache_set(row, y_float, patient_id=None, model_version="risk_v1")
 
         return {"predictions": predictions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Bulk prediction failed: {e}")
+
+def _risk_label(val: float) -> str:
+    if val < 5.7:
+        return "Normal"
+    if val < 6.5:
+        return "At Risk"
+    if val < 7.1:
+        return "Moderate Risk"
+    if val < 8.1:
+        return "Risky"
+    if val <= 9.0:
+        return "Very Risky"
+    return "Critical"
+
+def _key_factors_from_patient(patient: dict | None) -> list[str]:
+    if not patient:
+        return []
+    items: list[str] = []
+    try:
+        hba1c1 = float(patient.get("hba1c_1st_visit")) if patient.get("hba1c_1st_visit") is not None else None
+        fvg1 = float(patient.get("fvg_1")) if patient.get("fvg_1") is not None else None
+        rad = patient.get("reduction_a_per_day")
+        rad = float(rad) if rad is not None else None
+        fvg_delta_1_2 = patient.get("fvg_delta_1_2")
+        fvg_delta_1_2 = float(fvg_delta_1_2) if fvg_delta_1_2 is not None else None
+
+        if hba1c1 is not None:
+            if hba1c1 > 8:
+                items.append(f"High initial HbA1c ({hba1c1}%)")
+            elif hba1c1 < 5.7:
+                items.append(f"Normal initial HbA1c ({hba1c1}%)")
+        if fvg1 is not None and fvg1 > 130:
+            items.append(f"Elevated FVG @ V1 ({int(fvg1)} mg/dL)")
+        if rad is not None and rad < 0.01:
+            items.append(f"Low daily HbA1c drop ({rad:.3f})")
+        if fvg_delta_1_2 is not None and fvg_delta_1_2 > 0:
+            items.append(f"FVG increase between visits (+{fvg_delta_1_2})")
+    except Exception:
+        # Best-effort only
+        pass
+    return items[:6]
+
+@app.post("/risk-dashboard")
+def risk_dashboard(req: DashboardRequest, force: bool = False):
+    try:
+        model_version = req.model_version or "risk_v1"
+
+        # 1) Exact cache hit: return immediately, not stale
+        if not force:
+            hit = cache_get(req.features, patient_id=req.patient_id, model_version=model_version)
+            if hit is not None:
+                label = _risk_label(float(hit))
+                factors = _key_factors_from_patient(req.patient)
+                return {
+                    "prediction": float(hit),
+                    "risk_label": label,
+                    "key_factors": factors,
+                    "cached": True,
+                    "stale": False,
+                    "model_version": model_version,
+                }
+
+        # 2) No exact hit: try latest-per-patient; if present, return immediately with stale=true
+        latest = latest_get(req.patient_id, model_version=model_version)
+        if latest is not None and not force:
+            # Trigger background recompute to refresh exact cache for current features
+            import threading
+            def _recompute():
+                try:
+                    m = get_ridge_model()
+                    input_data = np.array(req.features, dtype=float).reshape(1, -1)
+                    pred = float(m.predict(input_data)[0])
+                    cache_set(req.features, pred, patient_id=req.patient_id, model_version=model_version)
+                    latest_set(req.patient_id, pred, model_version=model_version)
+                except Exception:
+                    pass
+            threading.Thread(target=_recompute, daemon=True).start()
+
+            label = _risk_label(float(latest))
+            factors = _key_factors_from_patient(req.patient)
+            return {
+                "prediction": float(latest),
+                "risk_label": label,
+                "key_factors": factors,
+                "cached": True,
+                "stale": True,
+                "model_version": model_version,
+            }
+
+        # 3) No latest value (or force): compute synchronously once, update both caches
+        m = get_ridge_model()
+        input_data = np.array(req.features, dtype=float).reshape(1, -1)
+        prediction_val = float(m.predict(input_data)[0])
+        cache_set(req.features, prediction_val, patient_id=req.patient_id, model_version=model_version)
+        latest_set(req.patient_id, prediction_val, model_version=model_version)
+
+        label = _risk_label(prediction_val)
+        factors = _key_factors_from_patient(req.patient)
+        return {
+            "prediction": prediction_val,
+            "risk_label": label,
+            "key_factors": factors,
+            "cached": False,
+            "stale": False,
+            "model_version": model_version,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Risk dashboard failed: {e}")
 
 @app.post("/rag")
 async def rag_query(request: Request):
