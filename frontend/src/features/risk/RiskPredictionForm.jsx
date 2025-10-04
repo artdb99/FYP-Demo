@@ -1,8 +1,10 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { patientsApi } from '../../api/patients';
 import { fastApiClient } from '../../api/client';
 import MetricBox from '../../components/MetricBox.jsx';
+import Card from '../../components/Card.jsx';
+import { LineChart, Activity as ActivityIcon, Lightbulb, TrendingUp } from 'lucide-react';
 
 function RiskPredictionForm() {
   const { id } = useParams();
@@ -170,66 +172,121 @@ function RiskPredictionForm() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 space-y-8 bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header with status pill */}
-      <header className="bg-gradient-to-r from-teal-500 to-green-600 text-white py-6 px-8 rounded-xl shadow-md flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Complication Risk Assessment</h2>
-          <p className="text-sm text-indigo-100">Predictions based on HbA1c, FVG, and therapy indicators</p>
-          {lastUpdated && (
-            <p className="text-[11px] text-white/80 mt-1">Last updated: {lastUpdated}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => { setError(null); setReloadKey(k=>k+1); pollAttemptsRef.current = 0; }}
-            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-md border border-white/20"
-            title="Refresh prediction"
-          >
-            ↻ Refresh
-          </button>
+    <div className="w-full px-6 md:px-10 lg:px-14 py-10 space-y-10">
+      <Card className="rounded-3xl bg-gradient-to-br from-white via-rose-50 to-rose-100 ring-1 ring-rose-100/70 shadow-xl p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+              <LineChart size={24} />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-rose-400">Patient risk insight</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Complication Risk Assessment</h1>
+              {lastUpdated && (
+                <p className="text-[11px] text-rose-400 mt-1">Last updated: {lastUpdated}</p>
+              )}
+            </div>
+          </div>
           {result?.label && (
-            <span className={`text-xs font-semibold px-3 py-1 rounded-full ring-2 ${result.color}`}>
+            <span className={`self-start text-xs font-semibold px-3 py-1 rounded-full ring-2 ${result.color}`}>
               {result.label}
             </span>
           )}
         </div>
-      </header>
 
-      {/* KPI Tiles */}
-      <KpiRow
-        h1={Number(patientData?.hba1c_1st_visit)}
-        h2={Number(patientData?.hba1c_2nd_visit)}
-        f1={Number(patientData?.fvg_1)}
-        f2={Number(patientData?.fvg_2)}
-      />
+        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="flex flex-col items-center justify-center rounded-2xl bg-white/80 ring-1 ring-white/70 shadow-inner px-6 py-6">
+            <RiskGauge value={gaugePercent} label={result?.value} ringClass={result?.color} />
+            <p className="mt-4 text-xs text-slate-500 text-center">Model score mapped across low to critical thresholds.</p>
+          </div>
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 text-sm text-slate-600">
+              <div className="rounded-xl bg-white/70 border border-white/80 px-4 py-3 shadow-sm">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Patient</p>
+                <p className="text-sm font-semibold text-slate-800">{patientData?.name}</p>
+                <p className="text-xs text-slate-500">{patientData?.gender}, {patientData?.age} y/o</p>
+              </div>
+              <div className="rounded-xl bg-white/70 border border-white/80 px-4 py-3 shadow-sm">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Risk status</p>
+                <p className="text-sm font-semibold text-slate-800">{result?.label ?? 'Pending'}</p>
+                {riskStale && <p className="text-xs text-amber-600 mt-1">Refreshing prediction…</p>}
+              </div>
+            </div>
 
-      {/* Overview */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Patient Card */}
-        <div className="bg-white rounded-xl shadow p-6 border border-gray-100 space-y-3">
-          <h3 className="text-lg font-semibold text-gray-800">{patientData?.name}</h3>
-          <p className="text-sm text-gray-600">{patientData?.gender}, {patientData?.age} y/o</p>
-          <p className="text-sm text-gray-700">
-            <span className="font-medium">Insulin Type:</span> {patientData?.insulin_regimen_type || '—'}
-          </p>
-          <div className="text-xs text-gray-600 bg-gray-50 rounded p-3 border border-gray-200">
-            <p className="mb-2">
-              <span className="font-semibold">Medical History:</span><br />
-              {patientData?.medicalHistory || '—'}
-            </p>
-            <p>
-              <span className="font-semibold">Medications:</span><br />
-              {patientData?.medications || '—'}
-            </p>
+            <div>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
+                <span>Low risk</span>
+                <span>Critical</span>
+              </div>
+              <RiskScale percent={gaugePercent} stops={riskStops} />
+            </div>
+
+            {keyFactors.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <Lightbulb size={14} /> Key contributing factors
+                </h4>
+                <KeyFactorChips items={keyFactors} />
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to={`/patient/${id}`}
+                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-rose-200 bg-white/80 text-rose-600 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+              >
+                View patient record
+              </Link>
+              <button
+                onClick={() => { setError(null); setReloadKey((k) => k + 1); pollAttemptsRef.current = 0; }}
+                className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-rose-200 bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                title="Refresh prediction"
+                type="button"
+              >
+                ↻ Refresh
+              </button>
+            </div>
           </div>
         </div>
+      </Card>
 
-        {/* Metric grids */}
-        <div className="col-span-2 space-y-6">
-          <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <IconChart /> Glycemic Metrics
+      <Card className="rounded-2xl bg-white shadow-md ring-1 ring-black/5 px-6 py-5">
+        <KpiRow
+          h1={Number(patientData?.hba1c_1st_visit)}
+          h2={Number(patientData?.hba1c_2nd_visit)}
+          f1={Number(patientData?.fvg_1)}
+          f2={Number(patientData?.fvg_2)}
+        />
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <Card className="rounded-2xl bg-white shadow-md ring-1 ring-black/5 px-6 py-6 space-y-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-semibold text-slate-900">{patientData?.name}</h3>
+              <p className="text-sm text-slate-500">{patientData?.gender}, {patientData?.age} y/o</p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+              {patientData?.insulin_regimen_type || 'Regimen —'}
+            </span>
+          </div>
+
+          <div className="grid gap-3 text-xs text-slate-600">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3 shadow-sm">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Medical history</p>
+              <p className="mt-1 leading-relaxed text-slate-600">{patientData?.medicalHistory || 'No history on record.'}</p>
+            </div>
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3 shadow-sm">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Current medications</p>
+              <p className="mt-1 leading-relaxed text-slate-600">{patientData?.medications || 'Not specified.'}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="rounded-2xl bg-white shadow-md ring-1 ring-black/5 px-6 py-6 space-y-6">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <LineChart size={14} /> Glycemic metrics snapshot
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
               <MetricBox label="HbA1c (1st)" value={patientData?.hba1c_1st_visit} />
@@ -237,81 +294,47 @@ function RiskPredictionForm() {
               <MetricBox label="FVG (1st)" value={patientData?.fvg_1} />
               <MetricBox label="FVG (2nd)" value={patientData?.fvg_2} />
             </div>
-            {/* Trends */}
-            <div className="mt-6 grid sm:grid-cols-2 gap-4">
-              <TrendCard
-                title="HbA1c Trend"
-                start={Number(patientData?.hba1c_1st_visit)}
-                end={Number(patientData?.hba1c_2nd_visit)}
-                min={4}
-                max={12}
-                targetLow={4.5}
-                targetHigh={6.5}
-                color="#0ea5e9"
-              />
-              <TrendCard
-                title="FVG Trend"
-                start={Number(patientData?.fvg_1)}
-                end={Number(patientData?.fvg_2)}
-                min={60}
-                max={250}
-                targetLow={80}
-                targetHigh={130}
-                color="#10b981"
-              />
-            </div>
           </div>
-          <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <IconActivity /> Treatment Trends
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-              <MetricBox label="HbA1c Δ" value={patientData?.reduction_a?.toFixed(1)} />
-              <MetricBox label="Daily HbA1c Drop" value={patientData?.reduction_a_per_day?.toFixed(3)} />
-              <MetricBox label="FVG Δ" value={patientData?.fvg_delta_1_2} />
-              <MetricBox label="Avg FVG" value={patientData?.avg_fvg_1_2} />
-            </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <TrendCard
+              title="HbA1c Trend"
+              start={Number(patientData?.hba1c_1st_visit)}
+              end={Number(patientData?.hba1c_2nd_visit)}
+              min={4}
+              max={12}
+              targetLow={4.5}
+              targetHigh={6.5}
+              color="#0ea5e9"
+            />
+            <TrendCard
+              title="FVG Trend"
+              start={Number(patientData?.fvg_1)}
+              end={Number(patientData?.fvg_2)}
+              min={60}
+              max={250}
+              targetLow={80}
+              targetHigh={130}
+              color="#10b981"
+            />
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Prediction block */}
-      <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
-        <div className="grid md:grid-cols-3 gap-6 items-center">
-          {/* Gauge */}
-          <div className="flex flex-col items-center">
-            <RiskGauge value={gaugePercent} label={result?.value} ringClass={result?.color} />
-          </div>
-
-          {/* Scale bar + category */}
-          <div className="md:col-span-2">
-            <div className="flex items-center justify-between text-[11px] text-gray-600 mb-2">
-              <span>Low</span><span>High</span>
-            </div>
-            <RiskScale percent={gaugePercent} stops={riskStops} />
-            <div className="mt-3 flex items-center gap-2 text-sm">
-              <span className="text-gray-600">Category:</span>
-              <span className={`font-semibold px-2 py-0.5 rounded-full ring-2 ${result?.color}`}>
-                {result?.label}
-              </span>
-              {riskStale && (
-                <span className="text-[11px] text-gray-500">Updating…</span>
-              )}
-            </div>
-
-            {/* Insight chips */}
-            {keyFactors.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><IconBulb /> Key Factors</h4>
-                <KeyFactorChips items={keyFactors} />
-              </div>
-            )}
-          </div>
+      <Card className="rounded-2xl bg-white shadow-md ring-1 ring-black/5 px-6 py-6">
+        <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+          <ActivityIcon size={14} /> Therapy response metrics
+        </h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+          <MetricBox label="HbA1c Δ" value={patientData?.reduction_a?.toFixed(1)} />
+          <MetricBox label="Daily HbA1c drop" value={patientData?.reduction_a_per_day?.toFixed(3)} />
+          <MetricBox label="FVG Δ" value={patientData?.fvg_delta_1_2} />
+          <MetricBox label="Avg FVG" value={patientData?.avg_fvg_1_2} />
         </div>
-      </div>
+      </Card>
 
-      <p className="text-center text-xs text-gray-400">
-        This assessment is powered by AI. Use clinical judgment alongside predictions for decision-making.
+      <p className="text-center text-xs text-slate-400">
+        AI-generated predictions should complement clinical judgment and patient preferences.
       </p>
     </div>
   );
@@ -448,7 +471,7 @@ function TrendCard({ title, start, end, min, max, targetLow, targetHigh, color =
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs font-semibold text-gray-700 flex items-center gap-2"><IconChartMini /> {title}</div>
+        <div className="text-xs font-semibold text-gray-700 flex items-center gap-2"><TrendingUp size={14} /> {title}</div>
         {delta != null && (
           <span className={`text-[11px] px-2 py-0.5 rounded-full border ${badge}`}>{delta > 0 ? '+' : ''}{delta.toFixed(2)}</span>
         )}
@@ -488,25 +511,6 @@ function KeyFactorChips({ items = [] }) {
 }
 
 /* ------- Icons ------- */
-function IconChart(props) { return (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M3 3v18h18"/><path d="M7 13l3-3 4 4 6-6"/>
-  </svg>
-);} 
-function IconActivity(props) { return (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-  </svg>
-);} 
-function IconBulb(props) { return (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M9 18h6"/><path d="M10 22h4"/><path d="M2 10a10 10 0 1 1 20 0c0 3.5-2 5.5-3.5 7.5-.4.5-.5 1-.5 1.5H6c0-.5-.1-1-.5-1.5C4 15.5 2 13.5 2 10z"/>
-  </svg>
-);} 
-function IconChartMini(props) { return (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <path d="M3 3v18h18"/><path d="M7 14l4-4 6 6"/>
-  </svg>
-);} 
+// lucide-react icons used above; small inline mini-icon replaced by TrendingUp for TrendCard header
 
 export default RiskPredictionForm;

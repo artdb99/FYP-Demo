@@ -12,7 +12,6 @@ const TherapyEffectivenessForm = () => {
   const pathlineChartInstanceRef = useRef(null);
   const [therapyPathline, setTherapyPathline] = useState([]);
   const [llmInsight, setLlmInsight] = useState('');
-  const [topFactors, setTopFactors] = useState([]);
 
   useEffect(() => {
     patientsApi.getById(id).then(setPatient).catch(err => console.error('Error:', err));
@@ -49,7 +48,6 @@ const TherapyEffectivenessForm = () => {
         .then((data) => {
           setTherapyPathline(data.probabilities);
           setLlmInsight(data.insight);
-          setTopFactors(data.top_factors);
         })
         .catch((err) => console.error('Prediction error:', err));
     }
@@ -166,102 +164,171 @@ const TherapyEffectivenessForm = () => {
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-      <div className="bg-white border border-blue-200 rounded-xl p-6 shadow mb-6">
-        <h2 className="text-2xl font-bold text-blue-600">{patient.name}</h2>
-        <p className="text-sm text-gray-600 mt-1">
-          {patient.age} y/o — {patient.gender} · Therapy Effectiveness Summary
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-4 gap-4">
-        <MetricCard title="HbA1c Δ (1→2)" value={typeof patient.reduction_a_per_day === 'number' ? patient.reduction_a_per_day : 'N/A'} color="indigo" icon="📉" />
-        <MetricCard title="HbA1c Reduction" value={typeof patient.reduction_a === 'number' ? patient.reduction_a : 'N/A'} color="blue" icon="💉" />
-        <MetricCard title="FVG Δ (1→2)" value={`${patient.fvg_delta_1_2 ?? 'N/A'}`} color="green" icon="📊" />
-        <MetricCard title="DDS Δ (1→3)" value={`${patient.dds_trend_1_3 ?? 'N/A'}`} color="purple" icon="🧠" />
-      </div>
-
-      <div className="bg-white rounded-xl shadow p-6">
-        <h3 className="text-md font-semibold text-gray-800 mb-4">Risk Overview</h3>
-        <div className="flex justify-around">
-          <Badge label="Complication" value={complicationRisk} />
-          <Badge label="Hypo" value={hypoRisk} />
-          <Badge label="Adherence" value={medAdherenceRisk} />
-        </div>
-      </div>
-
-      {therapyPathline.length === 3 && (
-        <div className="bg-white p-6 rounded-xl shadow">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Therapy Effectiveness Trend</h3>
-          <canvas ref={pathlineChartRef}></canvas>
-        </div>
-      )}
-
-      {llmInsight && (
-        <div className="p-6 rounded-xl shadow bg-green-50 border-l-4 border-green-500 text-green-900 space-y-6">
-          <h4 className="font-semibold text-lg flex items-center gap-2">🧠 LLM-Based Insight</h4>
-          <div className="space-y-2 text-sm" dangerouslySetInnerHTML={{ __html: parseMarkdown(llmInsight.replace(/^\-\s*/gm, '• ').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')) }} />
-          <div>
-            <h5 className="font-semibold text-sm mb-2 flex items-center gap-2">📊 Key Numbers</h5>
-            <div className="grid md:grid-cols-3 gap-4 text-center">
-              <div className="bg-indigo-100 rounded-lg p-4">
-                <div className="text-xs text-gray-600">HbA1c (1→3)</div>
-                <div className="text-lg font-bold text-indigo-700">{patient.hba1c_1st_visit} → {patient.hba1c_3rd_visit}</div>
+    <div className="w-full px-6 md:px-10 lg:px-14 py-10 space-y-10">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div className="rounded-3xl bg-gradient-to-br from-white via-indigo-50 to-purple-100 ring-1 ring-indigo-100/70 shadow-xl px-6 sm:px-8 py-8 space-y-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
+                <span className="text-xl">💊</span>
               </div>
-              <div className="bg-green-100 rounded-lg p-4">
-                <div className="text-xs text-gray-600">FVG (1→3)</div>
-                <div className="text-lg font-bold text-green-700">{patient.fvg_1} → {patient.fvg_3}</div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-indigo-400">Therapy intelligence</p>
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Therapy Effectiveness Review</h1>
+                <p className="text-xs text-indigo-400 mt-1">{patient.age} y/o · {patient.gender}</p>
               </div>
-              <div className="bg-purple-100 rounded-lg p-4">
-                <div className="text-xs text-gray-600">DDS (1→3)</div>
-                <div className="text-lg font-bold text-purple-700">{patient.dds_1} → {patient.dds_3}</div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 text-xs text-slate-500">
+              <div className="rounded-xl bg-white/80 border border-white/60 px-4 py-3 shadow-sm">
+                <p className="uppercase tracking-[0.2em] text-[11px] text-slate-400">Insulin regimen</p>
+                <p className="text-sm font-semibold text-slate-800">{patient.insulin_regimen_type || 'Not specified'}</p>
+              </div>
+              <div className="rounded-xl bg-white/80 border border-white/60 px-4 py-3 shadow-sm">
+                <p className="uppercase tracking-[0.2em] text-[11px] text-slate-400">Predicted pathway</p>
+                <p className="text-sm font-semibold text-slate-800">{therapyPathline.length ? `${Math.round((therapyPathline[2] ?? 0) * 100)}% at visit 3` : 'Loading…'}</p>
               </div>
             </div>
           </div>
-          <div>
-            <h5 className="font-semibold text-sm mb-2 flex items-center gap-2">✅ Recommended Next Steps</h5>
-            <ul className="list-disc list-inside space-y-1 text-sm">
-              <li>Adjust insulin therapy to address inconsistent HbA1c and rising FVG.</li>
-              <li>Monitor glycemic patterns closely to guide therapy adjustments.</li>
-            </ul>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <SummaryMetric label="HbA1c Δ (1→2)" value={typeof patient.reduction_a_per_day === 'number' ? `${patient.reduction_a_per_day.toFixed(3)}% / day` : '—'} tone="indigo" />
+            <SummaryMetric label="HbA1c reduction" value={typeof patient.reduction_a === 'number' ? `${patient.reduction_a.toFixed(1)}%` : '—'} tone="blue" />
+            <SummaryMetric label="FVG Δ (1→2)" value={patient.fvg_delta_1_2 ?? '—'} tone="emerald" />
+            <SummaryMetric label="DDS Δ (1→3)" value={patient.dds_trend_1_3 ?? '—'} tone="purple" />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 text-xs text-slate-600">
+            <RiskChip label="Complication" value={complicationRisk} />
+            <RiskChip label="Hypoglycemia" value={hypoRisk} />
+            <RiskChip label="Adherence" value={medAdherenceRisk} />
+          </div>
+
+          {therapyPathline.length === 3 && (
+            <div className="rounded-2xl bg-white/80 border border-white/70 px-4 sm:px-6 py-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Therapy effectiveness trajectory</h3>
+              <canvas ref={pathlineChartRef} className="max-h-[260px]"></canvas>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-3xl bg-white shadow-md ring-1 ring-black/5 px-6 py-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-700">Therapy summary</h3>
+            <span className="text-xs text-slate-400">Powered by LLM insights</span>
+          </div>
+
+          {llmInsight ? (
+            <div className="space-y-4 text-sm text-slate-600">
+              <div className="grid gap-3 sm:grid-cols-3 text-xs">
+                <InsightStat title="Pathline probability" value={`${Math.round((therapyPathline[therapyPathline.length - 1] ?? 0) * 100)}%`} tone="emerald" />
+                <InsightStat title="Complication risk" value={complicationRisk} tone="rose" />
+                <InsightStat title="Adherence signal" value={medAdherenceRisk} tone="purple" />
+              </div>
+
+              <div className="rounded-xl bg-emerald-50/70 border border-emerald-100 px-4 py-3">
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-600 mb-2">Summary</h4>
+                <div className="space-y-2" dangerouslySetInnerHTML={{ __html: parseMarkdown(llmInsight.replace(/^\-\s*/gm, '• ').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')) }} />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 text-xs">
+                <InsightStat title="HbA1c (1→3)" value={`${patient.hba1c_1st_visit ?? '—'} → ${patient.hba1c_3rd_visit ?? '—'}`} tone="indigo" />
+                <InsightStat title="FVG (1→3)" value={`${patient.fvg_1 ?? '—'} → ${patient.fvg_3 ?? '—'}`} tone="emerald" />
+                <InsightStat title="DDS (1→3)" value={`${patient.dds_1 ?? '—'} → ${patient.dds_3 ?? '—'}`} tone="purple" />
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-2">Recommended actions</h4>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    'Validate insulin regimen fit versus glycemic response trajectory.',
+                    'Increase behavioural support to reduce DDS-related adherence risk.',
+                    'Schedule follow-up analytics review in 4 weeks.',
+                  ].map((action, idx) => (
+                    <ActionChip key={idx} text={action} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-4 text-xs text-slate-500">
+              Generating treatment insight…
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="rounded-2xl bg-white shadow-md ring-1 ring-black/5 px-6 py-6 space-y-5">
+          <h3 className="text-sm font-semibold text-slate-700">Visit snapshots</h3>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <VisitCard visit="Visit 1" hba1c={patient.hba1c_1st_visit} fvg={patient.fvg_1} dds={patient.dds_1} />
+            <VisitCard visit="Visit 2" hba1c={patient.hba1c_2nd_visit} fvg={patient.fvg_2} dds={(patient.dds_1 + patient.dds_3) / 2} />
+            <VisitCard visit="Visit 3" hba1c={patient.hba1c_3rd_visit} fvg={patient.fvg_3} dds={patient.dds_3} />
           </div>
         </div>
-      )}
 
-      <div className="bg-white p-6 rounded-xl shadow">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Therapy Trends</h3>
-        <canvas ref={chartRef}></canvas>
+        <div className="rounded-2xl bg-white shadow-md ring-1 ring-black/5 px-6 py-6">
+          <h3 className="text-sm font-semibold text-slate-700 mb-4">Therapy metric trends</h3>
+          <canvas ref={chartRef}></canvas>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <VisitCard visit="Visit 1" hba1c={patient.hba1c_1st_visit} fvg={patient.fvg_1} dds={patient.dds_1} />
-        <VisitCard visit="Visit 2" hba1c={patient.hba1c_2nd_visit} fvg={patient.fvg_2} dds={(patient.dds_1 + patient.dds_3) / 2} />
-        <VisitCard visit="Visit 3" hba1c={patient.hba1c_3rd_visit} fvg={patient.fvg_3} dds={patient.dds_3} />
-      </div>
+      <p className="text-center text-xs text-slate-400">
+        Therapy intelligence is AI-assisted. Apply clinical judgment before adjusting care plans.
+      </p>
     </div>
   );
 };
 
-const MetricCard = ({ title, value, color, icon }) => {
-  const colorMap = { indigo: 'bg-indigo-50 text-indigo-700', blue: 'bg-blue-50 text-blue-700', green: 'bg-green-50 text-green-700', purple: 'bg-purple-50 text-purple-700' };
-  const formattedValue = typeof value === 'number' ? `${value.toFixed(2)} %` : value;
+const SummaryMetric = ({ label, value, tone = 'indigo' }) => {
+  const toneMap = {
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+    blue: 'bg-blue-50 text-blue-700 border-blue-100',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    purple: 'bg-purple-50 text-purple-700 border-purple-100',
+  };
   return (
-    <div className={`${colorMap[color]} p-4 rounded shadow text-center`}>
-      <div className="flex items-center justify-center space-x-2">
-        <span className="text-lg">{icon}</span>
-        <h4 className="text-xs uppercase font-semibold">{title}</h4>
-      </div>
-      <p className="text-xl font-bold mt-2">{formattedValue}</p>
+    <div className={`rounded-2xl border ${toneMap[tone] || toneMap.indigo} px-4 py-3 shadow-sm`}> 
+      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-inherit">{value}</p>
     </div>
   );
 };
 
-const Badge = ({ label, value }) => {
-  const colorMap = { High: 'bg-red-100 text-red-700', Moderate: 'bg-yellow-100 text-yellow-700', Low: 'bg-green-100 text-green-700' };
+const RiskChip = ({ label, value }) => {
+  const palette = {
+    High: 'bg-rose-50 text-rose-600 border border-rose-100',
+    Moderate: 'bg-amber-50 text-amber-600 border border-amber-100',
+    Low: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+  };
   return (
-    <span className={`px-3 py-1 rounded-full text-sm font-medium ${colorMap[value]}`}>{label}: {value}</span>
+    <div className={`rounded-full px-3 py-1 text-xs font-semibold flex items-center justify-between ${palette[value] || 'bg-slate-50 text-slate-600 border border-slate-100'}`}>
+      <span className="uppercase tracking-[0.2em] text-[10px] mr-2 text-slate-400">{label}</span>
+      <span>{value}</span>
+    </div>
   );
 };
+
+const InsightStat = ({ title, value, tone = 'indigo' }) => {
+  const toneMap = {
+    indigo: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    purple: 'bg-purple-50 text-purple-700 border-purple-100',
+    rose: 'bg-rose-50 text-rose-700 border-rose-100',
+  };
+  return (
+    <div className={`rounded-xl border ${toneMap[tone] || toneMap.indigo} px-4 py-3 text-center shadow-sm`}>
+      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">{title}</p>
+      <p className="mt-2 text-sm font-semibold text-inherit">{value}</p>
+    </div>
+  );
+};
+
+const ActionChip = ({ text }) => (
+  <span className="inline-flex items-start text-left text-xs leading-snug px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 shadow-sm max-w-[260px]">
+    {text}
+  </span>
+);
 
 const VisitCard = ({ visit, hba1c, fvg, dds }) => (
   <div className="bg-white shadow-md rounded-xl p-5 flex flex-col space-y-3 text-center hover:shadow-lg transition">
