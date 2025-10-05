@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useUser } from './UserContext'; // 1. import context
-import { Users, UserPlus, Activity, LineChart, Stethoscope, Settings, LogOut, MessageCircle, User as UserIcon, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { BarChart3, ShieldCheck, Users, UserPlus, Activity, LineChart, Stethoscope, Settings, LogOut, MessageCircle, User as UserIcon, PanelLeft, PanelLeftClose } from 'lucide-react';
 
 function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -13,37 +13,31 @@ function Layout({ children }) {
   const isOpen = !collapsed;
 
   return (
-    <div className="flex h-screen w-screen overflow-y-hidden overflow-x-visible bg-gray-50">
-      {/* Sidebar */}
-      <aside
-        className={`relative z-30 flex flex-col h-full overflow-y-auto overflow-x-visible transition-all duration-300 bg-gradient-to-b from-teal-300 to-green-500 text-white shadow-xl`}
-        style={{ width: isOpen ? 288 : 88 }}
-        aria-label="Primary"
-      >
-        <div className="flex items-center justify-between px-3 py-3 border-b border-white/20">
-          <div className={`flex items-center gap-2 ${isOpen ? 'flex-1 justify-center' : 'w-full justify-center'}`}> 
-            <img src="/biotective-logo.png" alt="BIOTECTIVE" className={`h-8 object-contain drop-shadow ${!isOpen ? 'hidden' : ''}`} onError={(e)=>{ e.currentTarget.style.display='none'; }} />
-            {!isOpen && (
-              <img
-                src="/Biotective_Logo_Alone.png"
-                alt="BIOTECTIVE"
-                className="h-6 w-6 object-contain drop-shadow mx-auto"
-                onError={(e)=>{ e.currentTarget.style.display='none'; }}
-              />
-            )}
+    <div className="flex h-screen flex-col bg-gray-50">
+      <RoleHeaderBar role={user.role} />
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <aside
+          className={`relative z-20 flex flex-col h-full overflow-y-auto overflow-x-visible transition-all duration-300 bg-gradient-to-b from-emerald-500/70 via-emerald-500/60 to-cyan-500/60 text-white shadow-xl backdrop-blur-md border-r border-white/20`}
+          style={
+            isOpen
+              ? { width: 'fit-content', minWidth: 216, maxWidth: 280 }
+              : { width: 88 }
+          }
+          aria-label="Primary"
+        >
+          <div className="flex items-center justify-center px-3 py-3 border-b border-white/20">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={isOpen}
+            >
+              {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+            </button>
           </div>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-md text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-expanded={isOpen}
-          >
-            {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-          </button>
-        </div>
-
-        <nav className="flex-1 mt-2 overflow-visible">
+          <nav className="flex-1 mt-2 overflow-visible">
           {/* Doctor Sidebar */}
           {user.role === 'doctor' && (
             <div className="px-2">
@@ -96,29 +90,24 @@ function Layout({ children }) {
           )}
         </nav>
 
-        <div className="mt-auto p-3 border-t border-white/20">
-          <button
-            onClick={logout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-md transition text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-            aria-label="Log Out"
-            title="Log Out"
-          >
-            <LogOut size={18} />
-            {isOpen && <span>Log Out</span>}
-          </button>
-        </div>
+          <div className="mt-auto p-3 border-t border-white/20">
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md transition text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              aria-label="Log Out"
+              title="Log Out"
+            >
+              <LogOut size={18} />
+              {isOpen && <span className="text-sm font-semibold tracking-wide">Log Out</span>}
+            </button>
+          </div>
 
-      </aside>
+        </aside>
 
-      {/* No hover-to-peek handle: collapsed rail is always clickable */}
-
-      {/* Main Content */}
-      <div className="flex flex-col flex-1 h-full overflow-auto bg-gray-50">
-        {/* Role badge at top-right */}
-        <div className="fixed top-3 right-4 z-40">
-          <RoleBadge role={user.role} />
-        </div>
-        <main className="flex-1 w-full px-6 py-8 text-gray-900">{children}</main>
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto px-6 py-8 text-gray-900">
+          {children}
+        </main>
       </div>
     </div>
   );
@@ -126,14 +115,79 @@ function Layout({ children }) {
 
 export default Layout;
 
+function RoleHeaderBar({ role }) {
+  const { user } = useUser();
+  const fullName = user?.name || '';
+  const firstName = fullName.split(' ')[0] || ''; 
+
+  const roleMeta = {
+    admin: {
+      gradient: 'from-purple-500/90 via-purple-400/80 to-rose-400/80',
+      iconBg: 'bg-white/15 text-white',
+      icon: <ShieldCheck size={18} />,
+      settingsPath: '/admin/settings',
+    },
+    doctor: {
+      gradient: 'from-emerald-500/90 to-cyan-500/80',
+      iconBg: 'bg-white/15 text-white',
+      icon: <Stethoscope size={18} />,
+      settingsPath: '/doctor/settings',
+    },
+    patient: {
+      gradient: 'from-sky-500/90 via-blue-400/80 to-indigo-500/80',
+      iconBg: 'bg-white/15 text-white',
+      icon: <BarChart3 size={18} />,
+      settingsPath: '/patient/settings',
+    },
+    default: {
+      label: 'Welcome',
+      badge: 'Workspace',
+      gradient: 'from-slate-500/90 via-slate-400/80 to-slate-500/80',
+      iconBg: 'bg-white/15 text-white',
+      icon: <Users size={18} />,
+    },
+  };
+  const meta = roleMeta[role] || roleMeta.default;
+
+  return (
+    <header className="w-full border-b border-emerald-100/60 bg-gradient-to-r from-white via-emerald-50 to-cyan-50 shadow-sm">
+      <div className="flex items-center justify-between px-6 py-3 text-slate-700">
+        <div className="flex items-center gap-4">
+          <img
+            src="/biotective-logo.png"
+            alt="BIOTECTIVE"
+            className="h-9 drop-shadow-sm"
+            onError={(e)=>{ e.currentTarget.style.display='none'; }}
+          />
+          <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${meta.iconBg} shadow-sm`}> 
+            {meta.icon}
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.3em] text-emerald-500 font-semibold">{meta.badge}</p>
+            <h2 className="text-lg font-semibold leading-tight text-slate-800">{meta.label}</h2>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <RoleBadge role={role} />
+          <NavLink
+            to={meta.settingsPath}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white shadow text-emerald-500 hover:bg-emerald-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+            title="Settings"
+          >
+            <Settings size={18} />
+          </NavLink>
+        </div>
+      </div>
+    </header>
+  );
+}
+
 function RoleBadge({ role }) {
-  // Get current user's name from context for first-name display
-  // We keep it self-contained by reusing useUser inside this component
   const { user } = useUser();
   const fullName = user?.name || '';
   const firstName = fullName.split(' ')[0] || '';
 
-  let label = firstName;
+  let label = firstName || 'User';
   let circleBg = 'bg-blue-100';
   let circleText = 'text-blue-700';
   if (role === 'admin') {
@@ -141,18 +195,23 @@ function RoleBadge({ role }) {
     circleBg = 'bg-purple-100';
     circleText = 'text-purple-700';
   } else if (role === 'doctor') {
-    label = `Dr. ${firstName}`;
+    label = `Dr. ${firstName || 'User'}`;
     circleBg = 'bg-green-100';
     circleText = 'text-green-700';
+  } else if (role === 'patient') {
+    label = firstName || 'Patient';
+    circleBg = 'bg-sky-100';
+    circleText = 'text-sky-700';
   }
+
   const initial = (firstName?.[0] || 'A').toUpperCase();
 
   return (
-    <div className="inline-flex items-center gap-3 px-3 py-2 rounded-full shadow-md bg-white/80 backdrop-blur border border-gray-200">
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${circleBg} ${circleText}`}>
+    <div className="inline-flex items-center gap-3 px-3 py-2 rounded-full bg-white/20 backdrop-blur border border-white/40 text-black">
+      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold ${circleBg} ${circleText}`}>
         {initial}
       </div>
-      <div className="text-sm font-semibold text-gray-800">
+      <div className="text-sm font-semibold tracking-tight">
         {label}
       </div>
     </div>

@@ -9,6 +9,20 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import Card from '@/components/Card.jsx';
+import {
+  Activity,
+  BarChart3,
+  Brain,
+  CalendarClock,
+  ClipboardPlus,
+  Droplet,
+  HeartPulse,
+  Loader2,
+  NotebookPen,
+  ShieldCheck,
+  Sparkles
+} from 'lucide-react';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 import { useParams } from 'react-router-dom';
@@ -114,232 +128,288 @@ Instructions:
     { date: 'In 90 days', title: 'Expected Follow-Up', icon: '⏳' }
   ];
 
+  const sections = !loading && aiResponse
+    ? aiResponse.split(/##\s+/).slice(1).map((section, index) => {
+        const [title, ...contentLines] = section.trim().split('\n');
+        const content = contentLines.join('\n').trim();
+        return renderAiSection({ title, content, index, patient, parseMarkdownBold, hba1cForecastChart });
+      })
+    : null;
+
   return (
-    <div className="max-w-5xl mx-auto px-6 py-10 space-y-10">
-      <div className="bg-indigo-100 border-l-4 border-indigo-500 p-4 rounded-lg shadow-sm mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-          <div>
-            <h1 className="text-xl font-bold text-indigo-800">{patient.name}</h1>
-            <p className="text-sm text-gray-700">{patient.age} y/o — {patient.gender}</p>
+    <div className="w-full px-6 md:px-10 lg:px-14 py-10 space-y-8">
+      <Card className="border-0 rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-emerald-50 ring-1 ring-indigo-100/70 shadow-xl px-6 sm:px-8 py-8 space-y-6">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-5">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-500 shadow">
+              <Brain size={28} />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xs uppercase tracking-[0.2em] text-indigo-400">Personalized therapy</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Treatment recommendation</h1>
+              <p className="text-sm text-indigo-500">
+                {patient.name} · {patient.age} y/o · {patient.gender} · Insulin regimen {patient.insulin_regimen_type || 'N/A'}
+              </p>
+            </div>
           </div>
-          <div className="mt-2 md:mt-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <HeroMetric icon={<Droplet size={16} />} label="HbA1c (latest)" value={`${(patient.hba1c_3rd_visit ?? patient.hba1c_2nd_visit ?? 0).toFixed(1)}%`} />
+            <HeroMetric icon={<HeartPulse size={16} />} label="DDS trend" value={`${Number(patient.dds_trend_1_3 ?? 0).toFixed(1)}`} />
+            <HeroMetric icon={<ShieldCheck size={16} />} label="eGFR" value={`${patient.egfr ?? '—'} mL/min`} />
             <button
-              className="bg-indigo-200 text-indigo-800 text-xs px-3 py-1 rounded border border-indigo-300 hover:bg-indigo-300 transition"
+              className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-500/90 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-500 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 disabled:opacity-60"
               onClick={generateReport}
               disabled={loading}
             >
-              {aiResponse ? "Regenerate Report" : "Generate Report"}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+              {loading ? 'Generating...' : aiResponse ? 'Regenerate report' : 'Generate report'}
             </button>
           </div>
         </div>
-        <p className="text-sm text-indigo-600 mt-2">AI-based treatment insights below</p>
+      </Card>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <InfoTile icon={<ClipboardPlus size={16} />} label="Name" value={patient.name} />
+        <InfoTile icon={<CalendarClock size={16} />} label="Age" value={`${patient.age} years`} />
+        <InfoTile icon={<Activity size={16} />} label="Gender" value={patient.gender} />
+        <InfoTile icon={<BarChart3 size={16} />} label="Insulin regimen" value={patient.insulin_regimen_type || 'Not specified'} />
       </div>
 
-      <section className="grid md:grid-cols-2 gap-6">
-        <InfoBox label="Name" value={patient.name} />
-        <InfoBox label="Age" value={patient.age} />
-        <InfoBox label="Gender" value={patient.gender} />
-        <InfoBox label="Insulin Regimen" value={patient.insulin_regimen_type || 'N/A'} />
-      </section>
-
-      <section className="grid md:grid-cols-4 gap-4">
-        <SummaryCard label="HbA1c Reduction" value={`↓ ${hba1cDrop}%`} color="green" />
-        <SummaryCard label="FVG Δ (1→2)" value={`${fvgDrop}`} color="blue" />
-        <SummaryCard label="DDS Δ (1→3)" value={`${ddsTrend}`} color="purple" />
-        <SummaryCard label="eGFR" value={`${egfr} mL/min`} color="gray" />
-      </section>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryTile tone="emerald" icon={<Droplet size={18} />} label="HbA1c Δ" value={`↓ ${(patient.reduction_a ?? 0).toFixed(1)}%`} />
+        <SummaryTile tone="cyan" icon={<Activity size={18} />} label="FVG Δ (1→2)" value={`${Number(fvgDrop ?? 0).toFixed(1)}`} />
+        <SummaryTile tone="purple" icon={<HeartPulse size={18} />} label="DDS Δ (1→3)" value={`${Number(ddsTrend ?? 0).toFixed(1)}`} />
+        <SummaryTile tone="sky" icon={<ShieldCheck size={18} />} label="eGFR" value={`${egfr} mL/min`} />
+      </div>
 
       {loading ? (
-        <section className="text-center text-blue-600 flex flex-col items-center">
-          <div className="text-lg font-medium animate-pulse">Generating treatment report...</div>
-          <div className="mt-2 text-sm">⏳ Please wait while our AI analyzes the patient's data</div>
-          <div className="mt-4 animate-spin h-8 w-8 border-t-2 border-blue-600 rounded-full"></div>
-        </section>
+        <Card className="rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-emerald-50 shadow-md ring-1 ring-indigo-100/60 px-6 py-12 text-center space-y-3">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-indigo-500" />
+          <p className="text-base font-semibold text-indigo-600">Generating treatment report…</p>
+          <p className="text-sm text-indigo-400">Please wait while the AI reviews clinical context and guidelines.</p>
+        </Card>
       ) : (
-        aiResponse.split(/##\s+/).slice(1).map((section, index) => {
-          const [title, ...contentLines] = section.trim().split('\n');
-          const content = contentLines.join('\n').trim();
-          const lines = content.split(/\n(?=\d+\.|\*|\-)/g).filter(Boolean);
-
-          if (title.toLowerCase().includes("trend")) {
-            return (
-              <section key={index} className="bg-green-50 border border-green-200 rounded-xl shadow p-6 text-green-900 space-y-4">
-                <h2 className="text-lg font-bold mb-2">Clinical Trend Overview</h2>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <TrendCard label="HbA1c Trend" values={[patient.hba1c_1st_visit, patient.hba1c_2nd_visit, patient.hba1c_3rd_visit]} unit="%" warn={patient.hba1c_3rd_visit > patient.hba1c_2nd_visit} />
-                  <TrendCard label="FVG Trend" values={[patient.fvg_1, patient.fvg_2, patient.fvg_3]} unit="mmol/L" warn={patient.fvg_3 > patient.fvg_2} />
-                  <TrendCard label="HbA1c Δ / 91d" values={[patient.reduction_a?.toFixed(2)]} unit="%" />
-                </div>
-              </section>
-            );
-          }
-
-          if (title.toLowerCase().includes("risk")) {
-            const riskMap = [
-              {
-                label: "Complication Risk",
-                score: patient.hba1c_1st_visit > 8 ? 80 : patient.hba1c_1st_visit > 7 ? 50 : 20,
-                color: "bg-red-500",
-                note: patient.hba1c_1st_visit > 8 ? "HbA1c > 8% — elevated long-term complication risk" :
-                  patient.hba1c_1st_visit > 7 ? "HbA1c > 7% — moderate glycemic risk" :
-                  "HbA1c controlled — lower complication likelihood"
-              },
-              {
-                label: "Kidney Function (eGFR)",
-                score: patient.egfr > 90 ? 20 : patient.egfr > 60 ? 50 : 80,
-                color: "bg-yellow-400",
-                note: patient.egfr > 90 ? "Normal kidney function" :
-                  patient.egfr > 60 ? "Mild renal decline — monitor advised" :
-                  "Possible CKD — close monitoring required"
-              },
-              {
-                label: "Medication Adherence Risk",
-                score: patient.dds_trend_1_3 > 1.5 ? 80 : patient.dds_trend_1_3 > 0.5 ? 50 : 20,
-                color: "bg-blue-500",
-                note: patient.dds_trend_1_3 > 1.5 ? "High DDS — patient distress may hinder adherence" :
-                  patient.dds_trend_1_3 > 0.5 ? "Moderate DDS — support recommended" :
-                  "Low DDS — good adherence likelihood"
-              }
-            ];
-
-            return (
-              <section key={index} className="bg-red-50 border border-red-200 rounded-xl shadow p-6 text-red-900 space-y-4">
-                <h2 className="text-lg font-bold mb-2">{title.trim()}</h2>
-                {riskMap.map((risk, i) => (
-                  <div key={i} className="mb-6">
-                    <RiskBar label={risk.label} value={risk.score} color={risk.color} />
-                    <p className="text-xs text-red-700 mt-1">
-                      {risk.label === "Complication Risk" && "Higher HbA1c levels increase the risk of vascular and nerve complications."}
-                      {risk.label === "Kidney Function (eGFR)" && "Lower eGFR values may indicate declining kidney health."}
-                      {risk.label === "Medication Adherence Risk" && "Elevated DDS scores suggest psychological barriers to adherence."}
-                    </p>
-                  </div>
-                ))}
-              </section>
-            );
-          }
-
-          if (title.toLowerCase().includes("medication")) {
-            return (
-              <section key={index} className="bg-blue-50 border border-blue-200 rounded-xl shadow p-6 text-blue-900">
-                <h2 className="text-lg font-bold mb-2">{title.trim()}</h2>
-                <div className="space-y-2 text-sm">
-                  {lines.map((line, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <span>💊</span>
-                      <span dangerouslySetInnerHTML={{ __html: parseMarkdownBold(line.trim()) }} />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            );
-          }
-
-          if (title.toLowerCase().includes("lifestyle")) {
-            return (
-              <section key={index} className="bg-purple-50 border border-purple-200 rounded-xl shadow p-6 text-purple-900">
-                <h2 className="text-lg font-bold mb-2">{title.trim()}</h2>
-                <ul className="grid md:grid-cols-2 gap-2 text-sm list-disc list-inside">
-                  {lines.slice(0, 6).map((line, i) => {
-                    const cleanLine = line.replace(/^\s*[-*]\s*/, "");
-                    return (
-                      <li key={i} className="leading-relaxed" dangerouslySetInnerHTML={{ __html: parseMarkdownBold(cleanLine.trim()) }} />
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          }
-
-          if (title.toLowerCase().includes("forecast")) {
-            return (
-              <section key={index} className="bg-yellow-50 border border-yellow-200 rounded-xl shadow p-6 text-yellow-900">
-                <h2 className="text-lg font-bold mb-4">📈 {title.trim()}</h2>
-                <Line data={hba1cForecastChart} options={{ responsive: true, plugins: { legend: { display: false } } }} />
-                <div className="text-sm whitespace-pre-line leading-relaxed mt-4" dangerouslySetInnerHTML={{ __html: parseMarkdownBold(content) }} />
-              </section>
-            );
-          }
-
-          return (
-            <section key={index} className="bg-gray-50 border border-gray-200 shadow rounded-xl p-6">
-              <h2 className="text-lg font-bold text-gray-800 mb-2">{title.trim()}</h2>
-              <div className="text-sm text-gray-700 whitespace-pre-line leading-relaxed" dangerouslySetInnerHTML={{ __html: parseMarkdownBold(content) }} />
-            </section>
-          );
-        })
+        sections
       )}
 
       {ragContext && (
-        <div className="mt-6 bg-white border border-blue-200 rounded-lg shadow-sm p-4 text-sm">
-          <details>
-            <summary className="cursor-pointer font-semibold text-blue-700">📚 Show AI Context (Medical Book References)</summary>
-            <pre className="mt-2 whitespace-pre-wrap text-gray-700">{ragContext}</pre>
+        <Card className="rounded-2xl bg-white shadow-md ring-1 ring-indigo-100/70 px-6 py-6 text-sm">
+          <details className="space-y-3">
+            <summary className="cursor-pointer font-semibold text-indigo-500 flex items-center gap-2">
+              <NotebookPen size={16} />
+              Show AI context (medical references)
+            </summary>
+            <pre className="whitespace-pre-wrap text-slate-600 bg-slate-50 border border-slate-100 rounded-lg p-4">{ragContext}</pre>
           </details>
-        </div>
+        </Card>
       )}
     </div>
   );
 };
 
-const InfoBox = ({ label, value }) => (
-  <div className="bg-gray-50 border border-gray-200 rounded p-4 shadow-sm">
-    <h4 className="text-xs font-semibold text-gray-500 uppercase">{label}</h4>
-    <p className="text-lg font-bold text-gray-800 mt-1">{value}</p>
-  </div>
+const InfoTile = ({ icon, label, value }) => (
+  <Card className="rounded-2xl bg-gradient-to-br from-white via-indigo-50/70 to-white border border-indigo-100 px-5 py-4 shadow-sm flex items-center gap-3">
+    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-indigo-500">
+      {icon}
+    </span>
+    <div>
+      <p className="text-xs uppercase tracking-[0.2em] text-indigo-300">{label}</p>
+      <p className="text-sm font-semibold text-slate-800 mt-1">{value}</p>
+    </div>
+  </Card>
 );
 
-const SummaryCard = ({ label, value, color }) => {
-  const bg = {
-    green: 'bg-green-50 text-green-700 border-green-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    purple: 'bg-purple-50 text-purple-700 border-purple-200',
-    gray: 'bg-gray-50 text-gray-700 border-gray-200',
-  }[color];
+const SummaryTile = ({ tone = 'emerald', icon, label, value }) => {
+  const palette = {
+    emerald: {
+      card: 'bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border-emerald-100 text-emerald-600',
+      iconWrap: 'bg-emerald-100 text-emerald-600',
+    },
+    cyan: {
+      card: 'bg-gradient-to-br from-cyan-50 via-white to-cyan-50 border-cyan-100 text-cyan-600',
+      iconWrap: 'bg-cyan-100 text-cyan-600',
+    },
+    purple: {
+      card: 'bg-gradient-to-br from-purple-50 via-white to-purple-50 border-purple-100 text-purple-600',
+      iconWrap: 'bg-purple-100 text-purple-600',
+    },
+    sky: {
+      card: 'bg-gradient-to-br from-sky-50 via-white to-sky-50 border-sky-100 text-sky-600',
+      iconWrap: 'bg-sky-100 text-sky-600',
+    },
+  }[tone];
 
   return (
-    <div className={`p-4 rounded shadow-sm border ${bg}`}>
-      <h4 className="text-xs uppercase font-semibold">{label}</h4>
-      <p className="text-xl font-bold mt-1">{value}</p>
-    </div>
+    <Card className={`flex items-center justify-between rounded-2xl border px-4 py-4 shadow-sm ${palette.card}`}>
+      <div className="flex items-center gap-3">
+        <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${palette.iconWrap}`}>{icon}</span>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide">{label}</p>
+          <p className="text-xl font-bold leading-tight text-slate-900">{value}</p>
+        </div>
+      </div>
+    </Card>
   );
 };
 
 const TrendCard = ({ label, values, unit, warn = false }) => {
-  let trendIcon = '–';
-  let trendText = 'Stable';
-
-  if (values.length >= 3) {
-    if (values[2] > values[1]) {
-      trendIcon = '📈';
-      trendText = 'Increasing';
-    } else if (values[2] < values[1]) {
-      trendIcon = '📉';
-      trendText = 'Decreasing';
-    }
-  }
-
-  const boxClass = warn ? 'bg-red-100 border border-red-300 text-red-800' : 'bg-white border border-green-100 text-green-700';
+  const direction = values.length >= 3 ? Math.sign((values[2] ?? 0) - (values[1] ?? 0)) : 0;
+  const icon = direction > 0 ? '📈' : direction < 0 ? '📉' : '➖';
+  const text = direction > 0 ? 'Increasing' : direction < 0 ? 'Decreasing' : 'Stable';
+  const tone = warn ? 'bg-gradient-to-br from-rose-50 via-white to-rose-50 border-rose-100 text-rose-600' : 'bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border-emerald-100 text-emerald-600';
 
   return (
-    <div className={`${boxClass} p-4 rounded shadow-sm text-center`}>
-      <h4 className="text-xs uppercase font-semibold">{label}</h4>
-      <p className="text-xl font-bold">{values.join(' → ')} {unit}</p>
-      <p className="text-sm mt-1">{trendIcon} {trendText}</p>
+    <Card className={`rounded-2xl px-4 py-4 shadow-sm border ${tone}`}>
+      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{label}</p>
+      <p className="text-lg font-semibold text-slate-800 mt-2">{values.filter((v) => v != null).map((v) => Number(v).toFixed(1)).join(' → ')} {unit}</p>
+      <p className="text-sm font-semibold mt-1">{icon} {text}</p>
+    </Card>
+  );
+};
+
+const RiskBar = ({ label, value, tone }) => {
+  const palette = {
+    danger: 'from-rose-500 via-rose-400 to-rose-500',
+    warning: 'from-amber-400 via-amber-300 to-amber-400',
+    safe: 'from-emerald-500 via-emerald-400 to-emerald-500',
+  }[tone];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-500">
+        <span>{label}</span>
+        <span className="text-sm font-semibold text-slate-700">{value}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className={`h-full bg-gradient-to-r ${palette} transition-all`} style={{ width: `${value}%` }}></div>
+      </div>
     </div>
   );
 };
 
-const RiskBar = ({ label, value, color }) => (
-  <div className="mb-4">
-    <div className="flex justify-between text-sm font-medium">
-      <span>{label}</span>
-      <span>{value}%</span>
-    </div>
-    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-      <div className={`h-2 ${color} rounded-full`} style={{ width: `${value}%` }}></div>
-    </div>
+const HeroMetric = ({ icon, label, value }) => (
+  <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-2 text-xs text-slate-500 shadow-sm">
+    <span className="text-indigo-400">{icon}</span>
+    <span className="font-semibold uppercase tracking-[0.2em] text-indigo-300">{label}</span>
+    <span className="text-sm font-semibold text-slate-800">{value}</span>
   </div>
 );
+
+const renderAiSection = ({ title, content, index, patient, parseMarkdownBold, hba1cForecastChart }) => {
+  const lower = title.toLowerCase();
+  const lines = content.split(/\n(?=\d+\.|\*|\-)/g).filter(Boolean);
+
+  if (lower.includes('trend')) {
+    return (
+      <Card key={index} className="rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-emerald-50 shadow-md ring-1 ring-emerald-100/70 px-6 py-6 space-y-5">
+        <SectionHeader icon={<HeartPulse size={16} />} title="Clinical trend overview" tone="emerald" />
+        <div className="grid gap-4 md:grid-cols-3">
+          <TrendCard label="HbA1c trend" values={[patient.hba1c_1st_visit, patient.hba1c_2nd_visit, patient.hba1c_3rd_visit]} unit="%" warn={patient.hba1c_3rd_visit > patient.hba1c_2nd_visit} />
+          <TrendCard label="FVG trend" values={[patient.fvg_1, patient.fvg_2, patient.fvg_3]} unit="mmol/L" warn={patient.fvg_3 > patient.fvg_2} />
+          <TrendCard label="HbA1c Δ / 91d" values={[patient.reduction_a ?? 0]} unit="%" warn={(patient.reduction_a ?? 0) < 0} />
+        </div>
+      </Card>
+    );
+  }
+
+  if (lower.includes('risk')) {
+    const riskTiles = [
+      {
+        label: 'Complication risk',
+        value: patient.hba1c_1st_visit > 8 ? 80 : patient.hba1c_1st_visit > 7 ? 50 : 20,
+        tone: patient.hba1c_1st_visit > 7 ? 'danger' : 'safe',
+      },
+      {
+        label: 'Kidney function',
+        value: patient.egfr > 90 ? 20 : patient.egfr > 60 ? 50 : 80,
+        tone: patient.egfr > 60 ? 'warning' : 'danger',
+      },
+      {
+        label: 'Adherence risk',
+        value: patient.dds_trend_1_3 > 1.5 ? 80 : patient.dds_trend_1_3 > 0.5 ? 50 : 20,
+        tone: patient.dds_trend_1_3 > 0.5 ? 'danger' : 'safe',
+      },
+    ];
+
+    return (
+      <Card key={index} className="rounded-3xl bg-gradient-to-br from-rose-50 via-white to-amber-50 shadow-md ring-1 ring-rose-100/70 px-6 py-6 space-y-4">
+        <SectionHeader icon={<ShieldCheck size={16} />} title={title.trim()} tone="rose" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {riskTiles.map((risk) => (
+            <RiskBar key={risk.label} label={risk.label} value={risk.value} tone={risk.tone} />
+          ))}
+        </div>
+        <div className="text-xs text-rose-500 whitespace-pre-line" dangerouslySetInnerHTML={{ __html: parseMarkdownBold(content) }} />
+      </Card>
+    );
+  }
+
+  if (lower.includes('medication')) {
+    return (
+      <Card key={index} className="rounded-3xl bg-gradient-to-br from-blue-50 via-white to-blue-50 shadow-md ring-1 ring-blue-100/70 px-6 py-6 space-y-4">
+        <SectionHeader icon={<ClipboardPlus size={16} />} title={title.trim()} tone="blue" />
+        <div className="space-y-3 text-sm text-slate-700">
+          {lines.map((line, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className="text-blue-400">💊</span>
+              <span dangerouslySetInnerHTML={{ __html: parseMarkdownBold(line.replace(/^\s*[-*]\s*/, '').trim()) }} />
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
+
+  if (lower.includes('lifestyle')) {
+    return (
+      <Card key={index} className="rounded-3xl bg-gradient-to-br from-purple-50 via-white to-purple-50 shadow-md ring-1 ring-purple-100/70 px-6 py-6 space-y-4">
+        <SectionHeader icon={<Activity size={16} />} title={title.trim()} tone="purple" />
+        <ul className="grid md:grid-cols-2 gap-3 text-sm text-slate-700 list-disc list-inside">
+          {lines.slice(0, 6).map((line, i) => (
+            <li key={i} dangerouslySetInnerHTML={{ __html: parseMarkdownBold(line.replace(/^\s*[-*]\s*/, '').trim()) }} />
+          ))}
+        </ul>
+      </Card>
+    );
+  }
+
+  if (lower.includes('forecast')) {
+    return (
+      <Card key={index} className="rounded-3xl bg-gradient-to-br from-amber-50 via-white to-amber-50 shadow-md ring-1 ring-amber-100/70 px-6 py-6 space-y-5">
+        <SectionHeader icon={<BarChart3 size={16} />} title={title.trim()} tone="amber" />
+        <Line data={hba1cForecastChart} options={{ responsive: true, plugins: { legend: { display: false } } }} />
+        <div className="text-sm text-amber-600 whitespace-pre-line" dangerouslySetInnerHTML={{ __html: parseMarkdownBold(content) }} />
+      </Card>
+    );
+  }
+
+  return (
+    <Card key={index} className="rounded-3xl bg-white shadow-md ring-1 ring-slate-100/70 px-6 py-6">
+      <SectionHeader icon={<NotebookPen size={16} />} title={title.trim()} tone="slate" />
+      <div className="text-sm text-slate-600 whitespace-pre-line" dangerouslySetInnerHTML={{ __html: parseMarkdownBold(content) }} />
+    </Card>
+  );
+};
+
+const SectionHeader = ({ icon, title, tone = 'indigo' }) => {
+  const palette = {
+    emerald: 'text-emerald-400 bg-emerald-100',
+    rose: 'text-rose-400 bg-rose-100',
+    blue: 'text-blue-400 bg-blue-100',
+    purple: 'text-purple-400 bg-purple-100',
+    amber: 'text-amber-400 bg-amber-100',
+    slate: 'text-slate-400 bg-slate-100',
+  }[tone] || 'text-indigo-400 bg-indigo-100';
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${palette}`}>{icon}</span>
+      <div>
+        <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Guided insight</p>
+        <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
+      </div>
+    </div>
+  );
+};
 
 export default TreatmentRecommendation;

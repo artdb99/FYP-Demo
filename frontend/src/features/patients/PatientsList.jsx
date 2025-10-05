@@ -21,7 +21,6 @@ const PatientsList = ({ hideHeader = false }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [sortBy, setSortBy] = useState(null); // 'name' | 'gender' | 'age' | 'status'
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
-  const [selected, setSelected] = useState(new Set());
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this patient?')) return;
@@ -249,26 +248,6 @@ const PatientsList = ({ hideHeader = false }) => {
     setSortDir(prev => (sortBy === key ? (prev === 'asc' ? 'desc' : 'asc') : 'asc'));
   };
 
-  const allVisibleIds = visiblePatients.map(p => p.id);
-  const allSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selected.has(id));
-  const toggleSelectAll = () => {
-    const next = new Set(selected);
-    if (allSelected) {
-      allVisibleIds.forEach(id => next.delete(id));
-    } else {
-      allVisibleIds.forEach(id => next.add(id));
-    }
-    setSelected(next);
-  };
-  const toggleSelect = (id) => {
-    const next = new Set(selected);
-    next.has(id) ? next.delete(id) : next.add(id);
-    setSelected(next);
-  };
-  const clearSelection = () => setSelected(new Set());
-
-  const selectedCount = selected.size;
-
   return (
     <div className="w-full px-6 md:px-10 lg:px-14 py-10 space-y-8 text-gray-900 dark:text-gray-100">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -403,9 +382,6 @@ const PatientsList = ({ hideHeader = false }) => {
           <table className="min-w-full text-sm text-left text-gray-700">
             <thead className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur text-xs uppercase font-semibold text-gray-600 border-b">
             <tr>
-              <th className="px-4 py-2.5 w-10">
-                <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} aria-label="Select all" />
-              </th>
               <th className="px-4 py-2.5">
                 <button onClick={() => toggleSort('name')} className="inline-flex items-center gap-1 hover:text-gray-900">Name {sortBy==='name' && (sortDir==='asc' ? <ChevronUp size={14}/> : <ChevronDown size={14}/> )}</button>
               </th>
@@ -436,16 +412,13 @@ const PatientsList = ({ hideHeader = false }) => {
             <tbody>
               {filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan="17" className="text-center py-6 text-gray-500">
+                  <td colSpan="16" className="text-center py-6 text-gray-500">
                     No matching patients found.
                   </td>
                 </tr>
               ) : (
                 visiblePatients.map((p) => (
                   <tr key={p.id} className="odd:bg-white even:bg-gray-50 hover:bg-emerald-50/30 transition border-b border-gray-200">
-                    <td className="px-4 py-2.5">
-                      <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleSelect(p.id)} aria-label={`Select ${p.name}`} />
-                    </td>
                     <td className="px-4 py-2.5 text-blue-600 font-medium">
                       <Link to={`/patient/${p.id}`} className="hover:underline">
                         {p.name}
