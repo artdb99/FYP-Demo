@@ -247,7 +247,7 @@ Instructions:
 
         groq_client = get_groq_client()
         response = groq_client.chat.completions.create(
-            model="deepseek-r1-distill-llama-70b",
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
         )
@@ -544,7 +544,7 @@ def predict_therapy_pathline(data: PatientData):
         )
 
         llm = get_groq_client().chat.completions.create(
-            model="deepseek-r1-distill-llama-70b",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "You are a helpful medical AI assistant."},
                 {"role": "user", "content": prompt}
