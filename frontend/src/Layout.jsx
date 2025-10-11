@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useUser } from './UserContext'; // 1. import context
-import { BarChart3, ShieldCheck, Users, UserPlus, Activity, LineChart, Stethoscope, Settings, LogOut, MessageCircle, User as UserIcon, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { BarChart3, ShieldCheck, Users, UserPlus, Activity, LineChart, Stethoscope, Settings, LogOut, MessageCircle, User as UserIcon, PanelLeft, PanelLeftClose, Bell } from 'lucide-react';
 
 function Layout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -11,14 +11,15 @@ function Layout({ children }) {
   if (!user) return <div className="p-6">Please sign in.</div>; // fallback
 
   const isOpen = !collapsed;
+  const role = (user?.role || '').toLowerCase();
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
-      <RoleHeaderBar role={user.role} />
+      <RoleHeaderBar role={role} />
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside
-          className={`relative z-20 flex flex-col h-full overflow-y-auto overflow-x-visible transition-all duration-300 bg-gradient-to-b from-emerald-500/70 via-emerald-500/60 to-cyan-500/60 text-white shadow-xl backdrop-blur-md border-r border-white/20`}
+          className={`relative z-20 flex flex-col h-full overflow-y-auto overflow-x-visible transition-all duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : '-translate-x-6'} bg-gradient-to-b from-emerald-500/70 via-emerald-500/60 to-cyan-500/60 text-white shadow-xl backdrop-blur-md border-r border-white/20`}
           style={
             isOpen
               ? { width: 'fit-content', minWidth: 216, maxWidth: 280 }
@@ -26,7 +27,7 @@ function Layout({ children }) {
           }
           aria-label="Primary"
         >
-          <div className="flex items-center justify-center px-3 py-3 border-b border-white/20">
+          <div className={`flex items-center border-b border-white/20 ${isOpen ? 'justify-center px-3 py-3' : 'justify-center pl-8 pr-4 py-3'}`}>
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="inline-flex items-center justify-center w-8 h-8 rounded-md text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
@@ -39,22 +40,25 @@ function Layout({ children }) {
           </div>
           <nav className="flex-1 mt-2 overflow-visible">
           {/* Doctor Sidebar */}
-          {user.role === 'doctor' && (
-            <div className="px-2">
-              {isOpen && <h3 className="px-2 py-2 text-white/80 text-[11px] font-semibold uppercase tracking-wide">Your Patients</h3>}
-              <ul className="space-y-1 overflow-visible">
+          {role === 'doctor' && (
+            <div className={`${isOpen ? 'px-2' : 'px-0'}`}>
+              <h3 className={`px-2 py-2 text-white/80 text-[11px] font-semibold uppercase tracking-wide transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>Your Patients</h3>
+              <ul className={`space-y-1 overflow-visible ${!isOpen ? 'flex flex-col items-center' : ''}`}>
                 <HoverAddPatientWrapper isOpen={isOpen} />
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '60ms' : '0ms' }}>
+                  <NavItem to="/messages" icon={<MessageCircle size={18} />} label="Messages" isOpen={isOpen} />
+                </li>
               </ul>
 
-              {isOpen && <h3 className="mt-3 px-2 py-2 text-white/80 text-[11px] font-semibold uppercase tracking-wide">Functions</h3>}
-              <ul className="space-y-1">
-                <li>
+              <h3 className={`mt-3 px-2 py-2 text-white/80 text-[11px] font-semibold uppercase tracking-wide transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>Functions</h3>
+              <ul className={`space-y-1 ${!isOpen ? 'flex flex-col items-center' : ''}`}>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '80ms' : '0ms' }}>
                   <NavItem to="/predict" icon={<LineChart size={18} />} label="Risk Prediction" isOpen={isOpen} />
                 </li>
-                <li>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '100ms' : '0ms' }}>
                   <NavItem to="/therapy-effectiveness" icon={<Activity size={18} />} label="Therapy Effectiveness" isOpen={isOpen} />
                 </li>
-                <li>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '120ms' : '0ms' }}>
                   <NavItem to="/treatment-recommendation" icon={<Stethoscope size={18} />} label="Treatment Recommendation" isOpen={isOpen} />
                 </li>
               </ul>
@@ -62,13 +66,21 @@ function Layout({ children }) {
           )}
 
           {/* Patient Sidebar */}
-          {user.role === 'patient' && (
-            <div className="px-2">
-              <ul className="space-y-1">
-                <li>
+          {role === 'patient' && (
+            <div className={`${isOpen ? 'px-2' : 'px-0'}`}>
+              <h3 className={`px-2 py-2 text-white/80 text-[11px] font-semibold uppercase tracking-wide transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>My Account</h3>
+              <ul className={`space-y-1 ${!isOpen ? 'flex flex-col items-center' : ''}`}>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '60ms' : '0ms' }}>
                   <NavItem to="/profile" icon={<UserIcon size={18} />} label="My Profile" isOpen={isOpen} />
                 </li>
-                <li>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '80ms' : '0ms' }}>
+                  <NavItem to="/messages" icon={<MessageCircle size={18} />} label="Messages" isOpen={isOpen} />
+                </li>
+              </ul>
+
+              <h3 className={`mt-3 px-2 py-2 text-white/80 text-[11px] font-semibold uppercase tracking-wide transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>Support</h3>
+              <ul className={`space-y-1 ${!isOpen ? 'flex flex-col items-center' : ''}`}>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '60ms' : '0ms' }}>
                   <NavItem to="/chatbot" icon={<MessageCircle size={18} />} label="Chat with Bot" isOpen={isOpen} />
                 </li>
               </ul>
@@ -76,13 +88,13 @@ function Layout({ children }) {
           )}
 
           {/* Admin Sidebar */}
-          {user.role === 'admin' && (
-            <div className="px-2">
+          {role === 'admin' && (
+            <div className={`${isOpen ? 'px-2' : 'px-0'}`}>
               <ul className="space-y-1 mt-2">
-                <li>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '60ms' : '0ms' }}>
                   <NavItem to="/admin/users" icon={<Settings size={18} />} label="Manage Users" isOpen={isOpen} />
                 </li>
-                <li>
+                <li className={`transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-0'}`} style={{ transitionDelay: isOpen ? '80ms' : '0ms' }}>
                   <NavItem to="/admin/patients" icon={<Users size={18} />} label="Manage Patients" isOpen={isOpen} />
                 </li>
               </ul>
@@ -90,10 +102,10 @@ function Layout({ children }) {
           )}
         </nav>
 
-          <div className="mt-auto p-3 border-t border-white/20">
+          <div className={`mt-auto border-t border-white/20 ${isOpen ? 'p-3' : 'py-3 pl-12 pr-0'}`}>
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md transition text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+              className={`flex items-center justify-center rounded-md transition text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${isOpen ? 'w-full gap-2 px-3 py-2' : 'gap-0 py-2'}`}
               aria-label="Log Out"
               title="Log Out"
             >
@@ -105,7 +117,7 @@ function Layout({ children }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto px-6 py-8 text-gray-900">
+        <main className={`flex-1 overflow-y-auto px-6 py-8 text-gray-900 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-1' : 'translate-x-0'}`}>
           {children}
         </main>
       </div>
@@ -169,6 +181,7 @@ function RoleHeaderBar({ role }) {
         </div>
         <div className="flex items-center gap-3">
           <RoleBadge role={role} />
+          <NotificationBell />
           <NavLink
             to={meta.settingsPath}
             className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white shadow text-emerald-500 hover:bg-emerald-50 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
@@ -223,7 +236,7 @@ function NavItem({ to, icon, label, isOpen }) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center ${isOpen ? 'gap-3 px-3 py-2 justify-start' : 'gap-0 px-0 py-2 justify-center w-full'} rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+        `flex items-center ${isOpen ? 'gap-3 px-3 py-2 justify-start' : 'gap-0 pl-8 pr-4 py-2.5 justify-center'} rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
           isActive ? 'bg-white text-purple-700 font-semibold' : 'text-white/90 hover:bg-white/10'
         }`}
       title={!isOpen ? label : undefined}
@@ -232,6 +245,118 @@ function NavItem({ to, icon, label, isOpen }) {
       <span className="shrink-0">{icon}</span>
       {isOpen && <span className="truncate">{label}</span>}
     </NavLink>
+  );
+}
+
+function NotificationBell() {
+  const { user } = useUser();
+  const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const apiBase = (import.meta.env.VITE_LARAVEL_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+
+  const fetchCount = async () => {
+    try {
+      const res = await fetch(`${apiBase}/api/notifications/unread-count?user_id=${user.id}`);
+      const data = await res.json();
+      setUnread(Number(data?.unread || 0));
+    } catch (_) {}
+  };
+
+  const fetchList = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${apiBase}/api/notifications?user_id=${user.id}&unread=1`);
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data.slice(0, 10) : []);
+    } catch (_) {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCount();
+    const t = setInterval(fetchCount, 10000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    if (open) fetchList();
+  }, [open]);
+
+  const goto = async (n) => {
+    const pid = n?.data?.patient_id;
+    if (!pid) return;
+    const path = user.role === 'doctor' ? `/patients/${pid}/messages` : `/patient/${pid}/messages`;
+    // mark this notification as read
+    try {
+      const apiBase = (import.meta.env.VITE_LARAVEL_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+      await fetch(`${apiBase}/api/notifications/${n.id}/read`, { method: 'PATCH' });
+      // refresh unread count optimistically
+      setUnread((u) => Math.max(0, u - 1));
+    } catch (_) {}
+
+    window.location.hash = '#';
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="relative inline-flex items-center justify-center w-9 h-9 rounded-full bg-white shadow text-emerald-600 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+        title="Notifications"
+        aria-label="Notifications"
+      >
+        <Bell size={18} />
+        {unread > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center">
+            {unread}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-auto rounded-md bg-white shadow-lg border border-emerald-100 z-50">
+          <div className="px-3 py-2 text-sm font-semibold text-emerald-700 border-b flex items-center justify-between">
+            <span>Notifications</span>
+            <button
+              onClick={async () => {
+                try {
+                  const apiBase = (import.meta.env.VITE_LARAVEL_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+                  await fetch(`${apiBase}/api/notifications/mark-all-read?user_id=${user.id}`, { method: 'PATCH' });
+                  setUnread(0);
+                  setItems([]);
+                } catch (_) {}
+              }}
+              className="text-[11px] font-normal text-emerald-600 hover:text-emerald-700"
+              title="Mark all as read"
+            >
+              Mark all as read
+            </button>
+          </div>
+          {loading ? (
+            <div className="p-3 text-sm text-gray-500">Loading...</div>
+          ) : items.length === 0 ? (
+            <div className="p-3 text-sm text-gray-500">No new notifications</div>
+          ) : (
+            <ul className="divide-y">
+              {items.map((n) => (
+                <li key={n.id} className="p-3 text-sm hover:bg-emerald-50 cursor-pointer" onClick={() => goto(n)}>
+                  <div className="font-medium text-slate-800">New message</div>
+                  <div className="text-slate-600 line-clamp-2">{n?.data?.snippet || 'New message received'}</div>
+                  <div className="text-[11px] text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

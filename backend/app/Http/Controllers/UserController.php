@@ -41,7 +41,7 @@ class UserController extends Controller
         return response()->json(['message' => 'User updated successfully', 'data' => $user], 200);
     }
 
-    // Delete user
+    // Delete user (admin only)
     public function destroy($id)
     {
         $user = User::findOrFail($id);
@@ -53,5 +53,25 @@ class UserController extends Controller
         $user->delete();
 
         return response()->json(['message' => 'User deleted successfully'], 200);
+    }
+
+    // Self-delete account (any authenticated user)
+    // DELETE /api/account
+    public function deleteSelf(Request $request)
+    {
+        $userId = $request->input('user_id');
+        if (!$userId) {
+            return response()->json(['message' => 'user_id required'], 400);
+        }
+
+        $user = User::findOrFail($userId);
+
+        // If this user is a patient, delete the patient row too
+        if ($user->role === 'patient' && $user->patient) {
+            $user->patient->delete();
+        }
+        $user->delete();
+
+        return response()->json(['message' => 'Account deleted successfully'], 200);
     }
 }

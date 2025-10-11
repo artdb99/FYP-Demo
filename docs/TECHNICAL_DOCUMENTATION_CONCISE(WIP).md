@@ -4,36 +4,31 @@
 - **Final Look (End-state experience)**
   - A modern, responsive web app with a role-aware sidebar and clean content cards.
   - Landing views that are informative at a glance (risk distribution, recent activity), with drill‑downs to detailed patient pages.
-  - Clear visual language: consistent typography, color semantics for risk, compact data tiles, and accessible components.
   - Seamless navigation between Patients, Risk, Therapy, and Treatment sections with minimal perceived latency.
 
 - **Functional Vision (What it does)**
   - Patient management: create, update, search, and filter patients; view longitudinal metrics and trends.
   - Risk intelligence: surface risk categories and scores per patient and in aggregate, with explanatory factors.
-  - Therapy insights: show effectiveness probabilities over visits and concise rationale to support decisions.
+  - Therapy insights: show effectiveness probabilities across visits and concise rationale to support decisions.
   - Clinical assistance: provide grounded Q&A using patient context and medical literature (RAG), with auditable prompts and outputs.
   - Role-driven UX: doctors manage panels and predictions; patients see their profile and guidance; admins govern access.
 
 - **Quality Vision (How it feels)**
   - Perceived instant loads for common views via caching and progressive rendering.
-  - Accessible by default (keyboard nav, color contrast)
-  - Secure and auditable: role indicators are visible, actions are attributable, and sensitive operations are protected.
-  - Configurable and testable: thresholds, colors, and model versions are centralized and version‑controlled.
-
-## 1) System Overview
-- **Purpose**
+{{ ... }}
   - A patient management platform that combines operational data (patients, visits, labs) with AI-assisted insights to support safer, faster, and more consistent clinical decisions.
   - How features serve clinical and operational value:
     - Risk Prediction: translates HbA1c/FVG and therapy indicators into a numeric risk score and category (Normal → Critical) to prioritize follow-up and triage at scale.
     - Therapy Effectiveness: projects effectiveness probabilities ross visits and summarizes contributing ftors, helping clinicians assess whether to continue, intensify, or change therapy.
     - Treatment Recommendation: provides structured, context-aware guidance using RAG + LLM (medical text + patient context), keeping suggestions grounded and auditable.
-    - Patient Management (CRUD, profiles): central source of truth for demographics, labs, adherence indicators, and trends used ross all AI features.
-    - Admin & Governance: user/patient management and cess boundaries so the right people manage the right data.
+    - Patient Management (CRUD, profiles): central source of truth for demographics, labs, adherence indicators, and trends used across all AI features.
+  - Admin & Governance: user/patient management and access boundaries so the right people manage the right data.
   - Outcomes: improved prioritization, reduced manual computation, explainable trends, and faster handoffs between care teams.
 
 - **Primary Use Cases**
   - Clinic dashboarding and triage: identify very risky patients and drill into details quickly.
   - Therapy monitoring: compare visit-to-visit trends and receive concise, structured insights.
+  - Chatbot: patient context-aware Q&A with medical literature (RAG) and visual snapshot of patient metrics and trends.
   - Case review: generate a treatment summary grounded in both patient context and medical literature (via RAG), to support MDT discussion.
 
 -- **Components**
@@ -99,11 +94,12 @@
 - **Entrypoint**: `backend/fastapi/main.py`
 - **Endpoints**
   - `GET /health` → `{ status: "ok" }`
-  - `POST /predict` → `{ prediction }`   (Body: `{ features: number[] }`)
-  - `POST /predict-bulk` → `{ predictions }`   (Body: `{ rows: number[][] }`)
+  - `POST /predict` → `{ prediction }`   (Body: `{ features: number[] }`) — if enabled
+  - `POST /predict-bulk` → `{ predictions }`   (Body: `{ rows: number[][] }`) — if enabled
+  - `POST /risk-dashboard?force=<bool>` → `{ prediction, risk_label, stale }` (returns cached value fast, background refresh if stale)
   - `POST /predict-therapy-pathline` → `{ probabilities[3], insight, top_factors[] }`
   - `POST /treatment-recommendation` → `{ response, context_used? }`
-  - `POST /chatbot-patient-query` → `{ response }`
+  - `POST /chatbot-patient-query` → `{ response }` (frontend now also sends optional `context`)
 - **Performance**
   - Lazy-load heavy resources for fast cold starts.
   - `/predict-bulk` avoids N× calls and uses vectorized inference.
@@ -187,6 +183,16 @@
 - **Auth**
   - Removed login debug alerts in `SignIn.jsx`.
 
+- **Chatbot experience (UI + context + visuals)**
+  - `frontend/src/features/chatbot/Chatbot.jsx` redesigned with hero card, refined bubbles, and suggested prompts.
+  - Added “Patient context” textarea; frontend includes `context` in the chatbot request payload.
+  - Visual snapshot in AI replies: metric badges (HbA1c, FVG, DDS, BMI) + mini trend chart and progress bars.
+  - Broadened visualization trigger keywords (trend/analysis/summary/risk/etc.).
+
+- **Ops**
+  - Documented Render health check at `GET /health`.
+  - Frontend expects `VITE_FASTAPI_URL` for production to target the Render base URL.
+
 ## 13) Product Backlog
 
 ### Log A: Risk Dashboard Performance & UX
@@ -216,27 +222,33 @@
   - Priority: High | Effort: S
 
 ### Log E: Frontend polish & tooling
-- **Design system and theming**
-  - Introduce a tokenized theme (spacing, color, typography) and a small style guide; dark mode switch optional.
-  - Priority: Medium | Effort: M
-- **Component library rationalization**
-  - Consolidate common primitives (`Button`, `Badge`, `Card`, `Input`) under `src/components/ui/` with props documented.
-  - Priority: Medium | Effort: M
-- **Consistent charts and empty states**
-  - Standardize chart palette and axes; define empty/loading/skeleton states for dashboard cards.
+**[Done] Reusable UI components**
+  - Consolidated and reused: `Card`, `MetricBox`, `RiskGauge`, `TrendCard`, `KpiTile`, `KeyFactorChips` under `src/components/` and feature folders.
+  - Result: consistent card/badge styling and simplified composition across Risk and Chatbot views.
+**[Done] Loading and empty states**
+  - Added page-level skeletons in `RiskPredictionForm.jsx` and subtle inline “Refreshing prediction…” indicator when stale.
+  - Standardized soft-empty states for cards (muted text, bordered containers).
+**[Done] Chart and metric visuals**
+  - Unified color semantics for risk gradients; improved SVG gauge centering and sparkline targets.
+  - Chart.js used selectively (chatbot insights) with matching palette.
+**[Done] API client centralization**
+  - `src/api/client.js` as the Axios base; feature modules (`patients.js`) wrap REST calls.
+
+### Log F: Chatbot Improvements
+- **[Done] UI revamp**
+  - Hero card, cohesive bubbles, suggested prompts layout.
+- **[Done] Patient context (frontend)**
+- **[Done] Rich AI visuals**
+  - Metric badges, trend chart, and progress bars on analytic replies.
+- **[Pending] Patient context (backend)**
+  - Accept optional `context` in `PatientChatRequest`; include in prompt with safe length clamp.
+  - Priority: High | Effort: S
+- **[Pending] Chat UX polish**
+  - Auto-scroll to latest, disable send while loading/empty, textarea auto-grow, responsive bubble widths.
   - Priority: Medium | Effort: S
-- **Performance & UX polish**
-  - Add code-splitting for rarely used views; prefetch data on hover for patient detail links; avoid layout shift.
-  - Priority: Medium | Effort: M
- - **Data fetching layer (TanStack Query)**
-   - AC: Introduce TanStack Query for patient lists and risk calls (query cache, background refetch, prefetch on hover).
-   - Priority: Medium | Effort: M
- - **Form handling & validation**
-   - AC: Use React Hook Form + Zod for `CreatePatient.jsx` and edits (schema validation, inline errors, keyboard-friendly).
-   - Priority: Medium | Effort: M
- - **Icon & date utilities**
-   - AC: Standardize icons via `lucide-react` and dates via `date-fns` with a single formatting helper.
-   - Priority: Low | Effort: S
+- **[Pending] Ops**
+  - Set Render Health Check Path to `/health`; ensure `VITE_FASTAPI_URL` points to Render in prod; optional keep‑warm cron.
+  - Priority: Medium | Effort: S
 
 ## 15) Deployment & Operational Notes
 - **Assets/logo**

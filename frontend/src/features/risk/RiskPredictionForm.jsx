@@ -46,6 +46,28 @@ function RiskPredictionForm() {
 
         const doFetchRisk = async () => {
           if (cancelled) return;
+          // 1) Try Laravel DB first for instant UI
+          const apiBase = (import.meta.env.VITE_LARAVEL_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+          try {
+            const pRes = await fetch(`${apiBase}/api/patients/${id}`);
+            if (pRes.ok) {
+              const p = await pRes.json();
+              if (p && p.last_risk_score != null) {
+                const numericRisk = parseFloat(p.last_risk_score);
+                const riskLabel = p.last_risk_label || mapNumericRisk(numericRisk);
+                const riskColor = getRiskColor(riskLabel);
+                setResult({ value: numericRisk.toFixed(2), label: riskLabel, color: riskColor, raw: numericRisk });
+                setLastUpdated(p.last_predicted_at ? new Date(p.last_predicted_at).toLocaleString() : new Date().toLocaleString());
+                setRiskStale(false);
+                pollAttemptsRef.current = 0;
+                return; // Served from DB cache; skip FastAPI
+              }
+            }
+          } catch (_) {
+            // ignore, fall through to FastAPI
+          }
+
+          // 2) No DB value yet -> compute via FastAPI
           const predictionRes = await fastApiClient.post('/risk-dashboard?force=false', {
             features,
             patient_id: Number(id),
@@ -56,16 +78,46 @@ function RiskPredictionForm() {
           const numericRisk = parseFloat(predictionRes.data.prediction);
           const riskLabel = predictionRes.data.risk_label || mapNumericRisk(numericRisk);
           const riskColor = getRiskColor(riskLabel);
+          const isCached = Boolean(predictionRes.data.cached);
+          
           setResult({ value: numericRisk.toFixed(2), label: riskLabel, color: riskColor, raw: numericRisk });
           setLastUpdated(new Date().toLocaleString());
-          const stale = Boolean(predictionRes.data.stale);
-          setRiskStale(stale);
-          if (stale && pollAttemptsRef.current < 10) {
-            pollAttemptsRef.current += 1;
-            setTimeout(doFetchRisk, 1200);
-          } else if (!stale) {
-            pollAttemptsRef.current = 0;
+          setRiskStale(false); // No longer using stale logic
+          
+          // Persist to Laravel if this was a fresh calculation (not cached)
+          if (!isCached && Number.isFinite(numericRisk)) {
+            console.log('💾 Saving risk to Laravel database...', {
+              patient_id: id,
+              score: numericRisk,
+              label: riskLabel,
+            });
+            try {
+              const saveResponse = await fetch(`${apiBase}/api/patients/${id}/risk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  score: numericRisk,
+                  label: riskLabel,
+                  model_version: predictionRes.data.model_version || 'risk_v1',
+                  predicted_at: new Date().toISOString(),
+                }),
+              });
+              
+              if (!saveResponse.ok) {
+                const errorText = await saveResponse.text();
+                console.error('❌ Laravel save failed:', saveResponse.status, errorText);
+              } else {
+                const saveData = await saveResponse.json();
+                console.log('✅ Risk saved to database:', saveData);
+              }
+            } catch (e) {
+              console.error('❌ Failed to persist risk to Laravel:', e);
+            }
+          } else if (isCached) {
+            console.log('✅ Risk loaded from database cache (patient_id:', id, ')');
           }
+          
+          pollAttemptsRef.current = 0;
         };
 
         // initial risk fetch (non-blocking)

@@ -1,102 +1,100 @@
 import os
-import sqlite3
-import hashlib
-import json
-# ---- Simple SQLite cache helpers ----
-_db_path = os.getenv("PREDICTION_CACHE_DB", "prediction_cache.sqlite")
+import mysql.connector
+from mysql.connector import Error
 
-def _get_db_conn():
-    conn = sqlite3.connect(_db_path)
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS prediction_cache (
-            key TEXT PRIMARY KEY,
-            value REAL NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    )
-    # For bulk endpoint we may also store vectors row-wise using same table per-row
-    return conn
-
-def _features_key(
-    features: list[float],
-    patient_id: int | None = None,
-    model_version: str = "risk_v1",
-) -> str:
-    """Create a stable cache key from inputs + optional patient and model version.
-
-    Including patient_id and model_version ensures keys change when either
-    the inputs (features), the patient, or the model changes.
-    """
-    payload = json.dumps(
-        {
-            "v": model_version,
-            "pid": patient_id,
-            "f": [float(x) for x in features],
-        },
-        separators=(",", ":"),
-        sort_keys=True,
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-def cache_get(features: list[float], patient_id: int | None = None, model_version: str = "risk_v1"):
+# ---- MySQL connection helper ----
+def _get_mysql_conn():
+    """Connect to Laravel MySQL database"""
     try:
-        key = _features_key(features, patient_id=patient_id, model_version=model_version)
-        with _get_db_conn() as conn:
-            cur = conn.execute("SELECT value FROM prediction_cache WHERE key = ?", (key,))
-            row = cur.fetchone()
-            return None if row is None else float(row[0])
-    except Exception:
+        conn = mysql.connector.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", "3306")),
+            user=os.getenv("DB_USERNAME", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            database=os.getenv("DB_DATABASE", "laravel")
+        )
+        return conn
+    except Error as e:
+        print(f"MySQL connection error: {e}")
         return None
 
-def cache_set(features: list[float], value: float, patient_id: int | None = None, model_version: str = "risk_v1"):
-    try:
-        key = _features_key(features, patient_id=patient_id, model_version=model_version)
-        with _get_db_conn() as conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO prediction_cache (key, value) VALUES (?, ?)",
-                (key, float(value)),
-            )
-    except Exception:
-        pass
-
-# ---- Latest-per-patient helpers (SWR) ----
-def _latest_key(patient_id: int | None, model_version: str) -> str:
-    return f"latest:{patient_id or 'na'}:{model_version}"
-
+# ---- Read from Laravel patients table ----
 def latest_get(patient_id: int | None, model_version: str = "risk_v1") -> float | None:
+    """Get last_risk_score from patients table in Laravel database"""
+    if patient_id is None:
+        return None
+
     try:
-        key = _latest_key(patient_id, model_version)
-        with _get_db_conn() as conn:
-            cur = conn.execute("SELECT value FROM prediction_cache WHERE key = ?", (key,))
-            row = cur.fetchone()
-            return None if row is None else float(row[0])
+        conn = _get_mysql_conn()
+        if conn is None:
+            return None
+
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT last_risk_score, risk_model_version FROM patients WHERE id = %s",
+            (patient_id,)
+        )
+        row = cursor.fetchone()
+
+        if row:
+            score, db_model_version = row
+            if score is not None and (db_model_version == model_version or db_model_version is None):
+                cursor.close()
+                conn.close()
+                return float(score)
+
+        cursor.close()
+        conn.close()
+        return None
     except Exception:
         return None
 
 def latest_set(patient_id: int | None, value: float, model_version: str = "risk_v1") -> None:
+    """This is now handled by Laravel backend via POST /api/patients/{id}/risk"""
+    # No-op: Laravel handles the database write
+    pass
+
+# ---- Write to Laravel patients table ----
+def save_latest_to_mysql(patient_id: int, value: float, label: str, model_version: str = "risk_v1") -> None:
     try:
-        key = _latest_key(patient_id, model_version)
-        with _get_db_conn() as conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO prediction_cache (key, value) VALUES (?, ?)",
-                (key, float(value)),
-            )
+        conn = _get_mysql_conn()
+        if conn is None:
+            return
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE patients
+            SET last_risk_score = %s,
+                last_risk_label = %s,
+                risk_model_version = %s,
+                last_predicted_at = NOW()
+            WHERE id = %s
+            """,
+            (float(value), str(label), str(model_version), int(patient_id))
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
     except Exception:
+        # silent fail; caller will still return the computed value
         pass
+
+# Deprecated cache functions (no longer used)
+def cache_get(features: list[float], patient_id: int | None = None, model_version: str = "risk_v1"):
+    """Deprecated: Now reads from MySQL via latest_get"""
+    return latest_get(patient_id, model_version)
+
+def cache_set(features: list[float], value: float, patient_id: int | None = None, model_version: str = "risk_v1"):
+    """Deprecated: Laravel handles writes"""
+    pass
 
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import os
 from dotenv import load_dotenv
 import warnings
 import numpy as np
 import pandas as pd
-import sqlite3
-import hashlib
-import json
 
 load_dotenv()
 
@@ -313,16 +311,18 @@ def predict(req: PredictionRequest, force: bool = False):
     try:
         model_version = req.model_version or "risk_v1"
 
-        # Check cache first (unless force recompute)
-        if not force:
-            cached = cache_get(req.features, patient_id=req.patient_id, model_version=model_version)
+        # Check MySQL for cached prediction (unless force recompute)
+        if not force and req.patient_id:
+            cached = latest_get(req.patient_id, model_version=model_version)
             if cached is not None:
                 return {"prediction": cached, "cached": True, "model_version": model_version}
 
+        # Compute fresh prediction
         m = get_ridge_model()
         input_data = np.array(req.features, dtype=float).reshape(1, -1)
         prediction = float(m.predict(input_data)[0])
-        cache_set(req.features, prediction, patient_id=req.patient_id, model_version=model_version)
+        
+        # Laravel will save via POST /api/patients/{id}/risk
         return {"prediction": prediction, "cached": False, "model_version": model_version}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
@@ -335,26 +335,10 @@ def predict_bulk(req: BulkPredictRequest):
         if not req.rows:
             return {"predictions": []}
 
-        predictions: list[float] = []
-        rows_to_compute: list[tuple[int, list[float]]] = []
-
-        # Try cache for each row
-        for idx, row in enumerate(req.rows):
-            cached = cache_get(row, patient_id=None, model_version="risk_v1")
-            if cached is None:
-                rows_to_compute.append((idx, row))
-                predictions.append(None)  # placeholder
-            else:
-                predictions.append(cached)
-
-        # Compute missing ones in a batch if any
-        if rows_to_compute:
-            X = np.array([r for _, r in rows_to_compute], dtype=float)
-            y = m.predict(X)
-            for (pos, row), y_val in zip(rows_to_compute, y):
-                y_float = float(y_val)
-                predictions[pos] = y_float
-                cache_set(row, y_float, patient_id=None, model_version="risk_v1")
+        # Compute all predictions (no caching for bulk endpoint)
+        X = np.array(req.rows, dtype=float)
+        y = m.predict(X)
+        predictions = [float(val) for val in y]
 
         return {"predictions": predictions}
     except Exception as e:
@@ -406,14 +390,14 @@ def risk_dashboard(req: DashboardRequest, force: bool = False):
     try:
         model_version = req.model_version or "risk_v1"
 
-        # 1) Exact cache hit: return immediately, not stale
-        if not force:
-            hit = cache_get(req.features, patient_id=req.patient_id, model_version=model_version)
-            if hit is not None:
-                label = _risk_label(float(hit))
+        # 1) Check MySQL for last saved prediction (unless force recalculate)
+        if not force and req.patient_id:
+            cached_score = latest_get(req.patient_id, model_version=model_version)
+            if cached_score is not None:
+                label = _risk_label(float(cached_score))
                 factors = _key_factors_from_patient(req.patient)
                 return {
-                    "prediction": float(hit),
+                    "prediction": float(cached_score),
                     "risk_label": label,
                     "key_factors": factors,
                     "cached": True,
@@ -421,41 +405,15 @@ def risk_dashboard(req: DashboardRequest, force: bool = False):
                     "model_version": model_version,
                 }
 
-        # 2) No exact hit: try latest-per-patient; if present, return immediately with stale=true
-        latest = latest_get(req.patient_id, model_version=model_version)
-        if latest is not None and not force:
-            # Trigger background recompute to refresh exact cache for current features
-            import threading
-            def _recompute():
-                try:
-                    m = get_ridge_model()
-                    input_data = np.array(req.features, dtype=float).reshape(1, -1)
-                    pred = float(m.predict(input_data)[0])
-                    cache_set(req.features, pred, patient_id=req.patient_id, model_version=model_version)
-                    latest_set(req.patient_id, pred, model_version=model_version)
-                except Exception:
-                    pass
-            threading.Thread(target=_recompute, daemon=True).start()
-
-            label = _risk_label(float(latest))
-            factors = _key_factors_from_patient(req.patient)
-            return {
-                "prediction": float(latest),
-                "risk_label": label,
-                "key_factors": factors,
-                "cached": True,
-                "stale": True,
-                "model_version": model_version,
-            }
-
-        # 3) No latest value (or force): compute synchronously once, update both caches
+        # 2) No cached value or force=true: compute fresh prediction
         m = get_ridge_model()
         input_data = np.array(req.features, dtype=float).reshape(1, -1)
         prediction_val = float(m.predict(input_data)[0])
-        cache_set(req.features, prediction_val, patient_id=req.patient_id, model_version=model_version)
-        latest_set(req.patient_id, prediction_val, model_version=model_version)
 
         label = _risk_label(prediction_val)
+        # Persist fresh score directly to MySQL so future calls hit cache
+        if req.patient_id:
+            save_latest_to_mysql(int(req.patient_id), prediction_val, label, model_version=model_version)
         factors = _key_factors_from_patient(req.patient)
         return {
             "prediction": prediction_val,

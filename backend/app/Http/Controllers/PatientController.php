@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Patient;
+use App\Models\User;
 use Carbon\Carbon;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
@@ -189,6 +190,37 @@ class PatientController extends Controller
         return new PatientResource($patient);
     }
 
+    // GET /api/patients/{id}/doctor
+    public function doctor($id)
+    {
+        $patient = Patient::find($id);
+        if (!$patient) {
+            return response()->json(['error' => 'Not found'], 404);
+        }
+        $doctor = null;
+        if ($patient->assigned_doctor_id) {
+            $doctor = User::find($patient->assigned_doctor_id);
+        }
+        if (!$doctor) {
+            return response()->json([
+                'doctor' => null,
+                'name' => null,
+                'email' => null,
+                'id' => null,
+            ], 200);
+        }
+        return response()->json([
+            'doctor' => [
+                'id' => $doctor->id,
+                'name' => $doctor->name,
+                'email' => $doctor->email,
+            ],
+            'id' => $doctor->id,
+            'name' => $doctor->name,
+            'email' => $doctor->email,
+        ], 200);
+    }
+
     public function getByUserId($user_id)
 {
     $patient = Patient::where('user_id', $user_id)->first();
@@ -213,6 +245,28 @@ class PatientController extends Controller
 
     return response()->json(['message' => 'Patient and linked user deleted']);
 }
+
+
+    // POST /api/patients/{id}/risk
+    // Body: { score: number, label: string, model_version?: string, predicted_at?: string(ISO) }
+    public function saveRisk(Request $request, $id)
+    {
+        $data = $request->validate([
+            'score' => 'required|numeric',
+            'label' => 'required|string|max:50',
+            'model_version' => 'nullable|string|max:50',
+            'predicted_at' => 'nullable|date',
+        ]);
+
+        $patient = Patient::findOrFail($id);
+        $patient->last_risk_score = round($data['score'], 2);
+        $patient->last_risk_label = $data['label'];
+        $patient->risk_model_version = $data['model_version'] ?? 'risk_v1';
+        $patient->last_predicted_at = isset($data['predicted_at']) ? Carbon::parse($data['predicted_at']) : now();
+        $patient->save();
+
+        return response()->json(['message' => 'Risk saved', 'data' => $patient]);
+    }
 
 
 }
