@@ -68,7 +68,7 @@ const SignIn = () => {
             />
           </div>
 
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-start text-sm text-gray-600 dark:text-gray-400">
             <label className="inline-flex items-center">
               <input
                 type="checkbox"
@@ -78,7 +78,6 @@ const SignIn = () => {
               />
               <span className="ml-2">Remember me</span>
             </label>
-            <a href="#" className="text-purple-600 dark:text-purple-400 hover:underline">Forgot password?</a>
           </div>
 
           <button
