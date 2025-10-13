@@ -4,6 +4,7 @@ import { Eye, LineChart, Users as UsersIcon, TrendingUp, Activity as ActivityIco
 import { useUser } from '@/UserContext.jsx';
 import { patientsApi } from '../../api/patients';
 import Card from '../../components/Card.jsx';
+import AssignPairModal from '../admin/AssignPairModal.jsx';
 
 const PatientsList = ({ hideHeader = false }) => {
   const [patients, setPatients] = useState([]);
@@ -21,6 +22,8 @@ const PatientsList = ({ hideHeader = false }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [sortBy, setSortBy] = useState(null); // 'name' | 'gender' | 'age' | 'status'
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignPatientId, setAssignPatientId] = useState(null);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this patient?')) return;
@@ -49,21 +52,24 @@ const PatientsList = ({ hideHeader = false }) => {
     loadDocs();
   }, [user]);
 
+  const refreshCurrentPage = async () => {
+    const params = {
+      perPage: pageSize,
+      page: currentPage,
+      search: searchTerm || undefined,
+      gender: genderFilter !== 'All Genders' ? genderFilter : undefined,
+      insulin: insulinFilter !== 'All Insulin Types' ? insulinFilter : undefined,
+      ...(user?.role === 'doctor' ? { doctor_id: user.id } : {}),
+    };
+    const { data, meta } = await patientsApi.list(params);
+    setPatients(data || []);
+    setMeta(meta || null);
+  };
+
   const handleAssignDoctor = async (patientId, doctorId) => {
     try {
       await patientsApi.assignDoctor(patientId, doctorId || null);
-      // refresh current page
-      const params = {
-        perPage: pageSize,
-        page: currentPage,
-        search: searchTerm || undefined,
-        gender: genderFilter !== 'All Genders' ? genderFilter : undefined,
-        insulin: insulinFilter !== 'All Insulin Types' ? insulinFilter : undefined,
-        ...(user?.role === 'doctor' ? { doctor_id: user.id } : {}),
-      };
-      const { data, meta } = await patientsApi.list(params);
-      setPatients(data || []);
-      setMeta(meta || null);
+      await refreshCurrentPage();
     } catch (e) {
       console.error('Assign failed', e);
       alert('Failed to assign doctor.');
@@ -251,7 +257,7 @@ const PatientsList = ({ hideHeader = false }) => {
   return (
     <div className="w-full px-6 md:px-10 lg:px-14 py-10 space-y-8 text-gray-900 dark:text-gray-100">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="rounded-3xl bg-white shadow-xl ring-1 ring-black/5 p-6 sm:p-8 lg:p-10 space-y-6">
+        <Card className="rounded-3xl shadow-xl ring-1 ring-emerald-100/60 p-6 sm:p-8 lg:p-10 space-y-6 bg-gradient-to-r from-emerald-50 to-cyan-50 min-h-[140px]">
           {!hideHeader && (
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
@@ -264,13 +270,8 @@ const PatientsList = ({ hideHeader = false }) => {
             </div>
           )}
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <p className="max-w-2xl text-sm text-slate-600 leading-relaxed">
-              Review patient records, track progress trends, and jump into quick actions from one consolidated workspace.
-            </p>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-              <div className="relative w-full sm:w-64">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4 sm:mt-6">
+            <div className="relative w-full sm:w-80">
                 <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
@@ -280,7 +281,15 @@ const PatientsList = ({ hideHeader = false }) => {
                   className="w-full rounded-full border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-400"
                 />
               </div>
-            </div>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => { setAssignPatientId(null); setAssignOpen(true); }}
+                className="inline-flex items-center justify-center h-10 px-3 rounded-md border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 hover:border-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                title="Assign Patient ↔ Doctor"
+              >
+                <Plus size={16} className="mr-2" /> Assign Patient ↔ Doctor
+              </button>
+            )}
           </div>
         </Card>
 
@@ -463,17 +472,11 @@ const PatientsList = ({ hideHeader = false }) => {
                         )}
                         {user?.role === 'admin' && (
                           <>
-                            <select
-                              className="border border-gray-300 rounded px-2 py-1 text-xs bg-white"
-                              value={p.assigned_doctor_id || ''}
-                              onChange={(e) => handleAssignDoctor(p.id, e.target.value ? Number(e.target.value) : null)}
-                              title="Assign doctor"
-                            >
-                              <option value="">Unassigned</option>
-                              {doctors.map(d => (
-                                <option key={d.id} value={d.id}>{d.name}</option>
-                              ))}
-                            </select>
+                            <span className="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 text-xs border border-gray-200">
+                              {p.assigned_doctor_id
+                                ? (doctors.find(d => d.id === p.assigned_doctor_id)?.name || `Doctor #${p.assigned_doctor_id}`)
+                                : 'Unassigned'}
+                            </span>
                             <button onClick={() => handleDelete(p.id)} className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 text-rose-600" title="Delete Patient">
                               <Trash2 size={16} />
                             </button>
@@ -512,6 +515,13 @@ const PatientsList = ({ hideHeader = false }) => {
           </button>
         </div>
       )}
+      {/* Assign modal */}
+      <AssignPairModal
+        open={assignOpen}
+        preselectPatientId={assignPatientId}
+        onClose={() => setAssignOpen(false)}
+        onAssigned={async () => { setAssignOpen(false); await refreshCurrentPage(); }}
+      />
     </div>
   );
 };

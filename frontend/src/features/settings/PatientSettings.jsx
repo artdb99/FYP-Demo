@@ -18,6 +18,9 @@ export default function PatientSettings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [touched, setTouched] = useState({ new: false, confirm: false, current: false });
+  const minLen = 6;
+  const isPwValid = (val) => val.length >= minLen;
 
   const handleProfileSave = async () => {
     setSaving(true);
@@ -34,6 +37,10 @@ export default function PatientSettings() {
   };
 
   const handlePasswordChange = async () => {
+    if (!isPwValid(password.new)) {
+      setMessage(`New password must be at least ${minLen} characters`);
+      return;
+    }
     if (password.new !== password.confirm) {
       setMessage('New passwords do not match');
       return;
@@ -139,35 +146,55 @@ export default function PatientSettings() {
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Current Password <span className="text-rose-600">*</span></label>
             <input
               type="password"
               value={password.current}
               onChange={(e) => setPassword({ ...password, current: e.target.value })}
+              onBlur={() => setTouched((t) => ({ ...t, current: true }))}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
             />
+            {touched.current && !password.current ? (
+              <p className="mt-1 text-[11px] leading-tight text-rose-600 min-h-[14px]">This field is required.</p>
+            ) : (
+              <p className="mt-1 text-[11px] leading-tight min-h-[14px] invisible">placeholder</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">New Password <span className="text-rose-600">*</span></label>
             <input
               type="password"
               value={password.new}
               onChange={(e) => setPassword({ ...password, new: e.target.value })}
+              onBlur={() => setTouched((t) => ({ ...t, new: true }))}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
             />
+            {touched.new && !isPwValid(password.new) ? (
+              <p className="mt-1 text-[11px] leading-tight text-rose-600 min-h-[14px]">Password must be at least {minLen} characters.</p>
+            ) : (
+              <p className="mt-1 text-[11px] leading-tight min-h-[14px] invisible">placeholder</p>
+            )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password <span className="text-rose-600">*</span></label>
             <input
               type="password"
               value={password.confirm}
               onChange={(e) => setPassword({ ...password, confirm: e.target.value })}
+              onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
             />
+            {touched.confirm && password.confirm && password.new !== password.confirm ? (
+              <p className="mt-1 text-[11px] leading-tight text-rose-600 min-h-[14px]">Passwords do not match.</p>
+            ) : touched.confirm && !password.confirm ? (
+              <p className="mt-1 text-[11px] leading-tight text-rose-600 min-h-[14px]">This field is required.</p>
+            ) : (
+              <p className="mt-1 text-[11px] leading-tight min-h-[14px] invisible">placeholder</p>
+            )}
           </div>
           <button
             onClick={handlePasswordChange}
-            disabled={saving}
+            disabled={saving || !isPwValid(password.new) || password.new !== password.confirm || !password.current}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700 disabled:opacity-50"
           >
             <Lock size={16} />

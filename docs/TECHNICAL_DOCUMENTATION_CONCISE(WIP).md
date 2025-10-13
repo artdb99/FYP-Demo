@@ -33,7 +33,7 @@
 
 -- **Components**
   - **Laravel** (backend API + serves the React SPA)
-  - **FastAPI** (ML inference and RAG/LLM endpoints; hosted separately)
+  - **FastAPI** (ML inference and RAG/LLM endpoints; hosted separately; uses Groq via `GROQ_API_KEY` and `GROQ_MODEL`)
   - **React SPA** (built with Vite; deployed inside Laravel `public/`)
 
 ## 2) High-Level Architecture
@@ -55,9 +55,9 @@
     - `DB_SSL_CA=/home/site/wwwroot/storage/certs/DigiCertGlobalRootCA.crt.pem`
 
 - **FastAPI (Render)**
-  - No `.env` in repo. Set any keys in Render’s environment (e.g., `PINECONE_API_KEY`, `GROQ_API_KEY`, `OPENAI_API_KEY`).
+  - No `.env` in repo. Set keys in the host environment: `PINECONE_API_KEY`, `GROQ_API_KEY`, `OPENAI_API_KEY`, and `GROQ_MODEL` (e.g. `llama-3.3-70b-versatile` or `llama-3.1-8b-instant`).
   - Start: `uvicorn main:app --host 0.0.0.0 --port 10000`
-  - SPA note: the React app uses build-time configuration (Vite) for its API base URLs.
+  - SPA note: the React app uses build-time configuration (Vite) for its API base URLs (`VITE_LARAVEL_URL`, `VITE_FASTAPI_URL`).
 
 - **CORS**
   - FastAPI allows the deployed frontend/Laravel origins; tighten for production as needed.
@@ -76,11 +76,18 @@
 
 ## 5) Laravel Backend (API + Hosting)
 - **Endpoints (representative)**
-  - `GET /api/patients`
-    - Filters: `perPage`, `page`, `search`, `gender`, `insulin`
-    - Response: `{ data: Patient[], meta: { total, last_page, ... } }`
-  - `GET /api/patients/:id`
-    - Response: `{ data: Patient }`
+  - Patients
+    - `GET /api/patients` (filters: `perPage`, `page`, `search`, `gender`, `insulin`)
+    - `GET /api/patients/:id`
+    - `GET /api/patients/by-user/{userId}` (resolve patient by linked user)
+    - `GET /api/patients/{id}/doctor` (assigned doctor: `{ id, name, email }`)
+    - `POST /api/patients/{id}/risk` (persist latest risk from FastAPI)
+    - `PATCH /api/patients/{id}/assign-doctor` (assign/unassign doctor)
+  - Messaging
+    - `GET /api/messages/conversations`
+    - `GET /api/messages/thread/{patientId}`
+    - `POST /api/messages`
+    - `PATCH /api/messages/{id}/read`
   - Admin (if enabled): `GET/DELETE /api/admin/users`, `DELETE /api/admin/patients/:id`
 
 - **Validation/Resources**
@@ -96,7 +103,7 @@
   - `GET /health` → `{ status: "ok" }`
   - `POST /predict` → `{ prediction }`   (Body: `{ features: number[] }`) — if enabled
   - `POST /predict-bulk` → `{ predictions }`   (Body: `{ rows: number[][] }`) — if enabled
-  - `POST /risk-dashboard?force=<bool>` → `{ prediction, risk_label, stale }` (returns cached value fast, background refresh if stale)
+  - `POST /risk-dashboard?force=<bool>` → `{ prediction, risk_label, cached, stale, model_version }` (read‑through from MySQL; compute if missing)
   - `POST /predict-therapy-pathline` → `{ probabilities[3], insight, top_factors[] }`
   - `POST /treatment-recommendation` → `{ response, context_used? }`
   - `POST /chatbot-patient-query` → `{ response }` (frontend now also sends optional `context`)
@@ -110,6 +117,7 @@
   - `src/features/risk/`: `RiskDashboard`, `RiskPredictionForm`
   - `src/features/therapy/`: `TherapyDashboard`, `TherapyEffectivenessForm`
   - `src/features/treatment/`: `TreatmentRecommendationDashboard`, `TreatmentRecommendationForm`
+  - `src/features/messages/`: `MessagesPage`, `MessagesThread`, `MessageInput`
   - `src/features/admin/`: admin views
   - `src/api/`: `client.js` (Axios), `patients.js` (REST wrapper)
   - `src/components/`: shared UI (Card, PageHeader, MetricBox, RiskBadge, etc.)
@@ -119,6 +127,10 @@
   - `RiskDashboard` calls `POST /predict-bulk` once, maps predictions to patients, aggregates chart counts.
   - `RiskPredictionForm` accepts precomputed risk via Link state for instant render, then revalidates with `POST /predict`.
   - `TherapyEffectivenessForm` calls `POST /predict-therapy-pathline` and renders trends + LLM insight.
+  - Messages:
+    - Patient role: single-thread view with assigned doctor; conversations list hidden.
+    - `MessagesPage` resolves `myPatientId` via `GET /api/patients/by-user/{userId}`; `MessagesThread` fetches doctor header via `GET /api/patients/{id}/doctor`.
+    - Input field/button anchored at the bottom of the container; bubbles aligned by sender.
 
 ## 8) Data Model (used by features/ML)
 - **Patient fields (common)**
@@ -170,28 +182,17 @@
   - Predict endpoints versioned
 
 ## 12) Recent Changes Summary (Oct 2025)
-- **Risk Prediction caching** (`backend/fastapi/main.py`)
-  - Feature-hash key includes `patient_id` and `model_version`.
-  - Added lightweight SQLite K/V table `prediction_cache.sqlite` for cache and a second key for latest-per-patient: `latest:<patient_id>:<version>`.
-- **SWR for Risk Dashboard**
-  - New endpoint `POST /risk-dashboard` returns cached value immediately; on miss returns latest with `stale: true` and triggers background recompute.
-  - `frontend/src/features/risk/RiskDashboard.jsx` sends per-patient calls in parallel and updates each card as soon as it completes.
-- **Risk Prediction view UX**
-  - `frontend/src/features/risk/RiskPredictionForm.jsx` no longer blocks the whole page; fetches risk in background and shows “Updating…” if stale.
-- **Gauge/UI**
-  - Center badge drawn inside SVG; larger radius and stroke; better alignment.
-- **Auth**
-  - Removed login debug alerts in `SignIn.jsx`.
-
-- **Chatbot experience (UI + context + visuals)**
-  - `frontend/src/features/chatbot/Chatbot.jsx` redesigned with hero card, refined bubbles, and suggested prompts.
-  - Added “Patient context” textarea; frontend includes `context` in the chatbot request payload.
-  - Visual snapshot in AI replies: metric badges (HbA1c, FVG, DDS, BMI) + mini trend chart and progress bars.
-  - Broadened visualization trigger keywords (trend/analysis/summary/risk/etc.).
-
-- **Ops**
-  - Documented Render health check at `GET /health`.
-  - Frontend expects `VITE_FASTAPI_URL` for production to target the Render base URL.
+- **Risk Prediction caching (read‑through via MySQL)**
+  - `/risk-dashboard` first checks `patients` table (`last_risk_score`, `risk_model_version`), computes via Ridge model if missing or forced, and persists back to MySQL.
+  - Responses include `{ cached, model_version }`.
+- **Patient Messaging simplification**
+  - Patient view now shows a single conversation with their assigned doctor; conversations list removed for patients.
+  - Added `GET /api/patients/{id}/doctor` to surface doctor name/email for the header.
+  - Input bar is anchored at the bottom of the message container; message UI polished (bubble colors, timestamps).
+- **LLM model configuration**
+  - Replaced deprecated Groq model with env-driven selection: `GROQ_MODEL` (default recommended: `llama-3.3-70b-versatile` or `llama-3.1-8b-instant`).
+- **General UI**
+  - Sidebar icon centering and logout/toggle alignment in `frontend/src/Layout.jsx`.
 
 ## 13) Product Backlog
 
@@ -210,8 +211,8 @@
   - Priority: Medium | Effort: S
 
 ### Log C: Backend caching & durability
-- **[Done] SQLite cache + latest-per-patient**
-  - Keys: exact feature-hash and `latest:<patient_id>:<version>`.
+- **[Done] MySQL read‑through cache**
+  - Persist fresh predictions to `patients` table; reads return cached scores when available.
 - **Historical audit table (optional)**
   - AC: `risk_predictions` table with `(patient_id, features_hash, model_version, prediction, created_at)` + composite index.
   - Priority: Low | Effort: M
