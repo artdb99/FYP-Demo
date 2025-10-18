@@ -28,10 +28,3 @@ jobs:
           app-name: 104384876FastAPI
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_STAGING_APP }}
           package: backend/fastapi
-          enable-oryx-build: true
-
-      - name: Vendor Python packages into app folder (fallback)
-        working-directory: backend/fastapi
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -t .python_packages/lib/site-packages
