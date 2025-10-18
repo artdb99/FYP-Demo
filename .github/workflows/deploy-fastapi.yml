@@ -23,6 +23,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Show files to deploy
+        working-directory: backend/fastapi
+        run: |
+          pwd
+          ls -la
+          test -f main.py && echo "Found main.py"
+          test -f requirements.txt && echo "Found requirements.txt"
+
       - name: Wait for SCM to settle
         run: sleep 90
         
