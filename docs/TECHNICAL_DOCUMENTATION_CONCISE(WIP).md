@@ -182,30 +182,7 @@
   - Predict endpoints versioned
 
 ## 12) Recent Changes Summary (Oct 2025)
-- **Risk Prediction caching** (`backend/fastapi/main.py`)
-  - Feature-hash key includes `patient_id` and `model_version`.
-  - Added lightweight SQLite K/V table `prediction_cache.sqlite` for cache and a second key for latest-per-patient: `latest:<patient_id>:<version>`.
-- **SWR for Risk Dashboard**
-  - New endpoint `POST /risk-dashboard` returns cached value immediately; on miss returns latest with `stale: true` and triggers background recompute.
-  - `frontend/src/features/risk/RiskDashboard.jsx` sends per-patient calls in parallel and updates each card as soon as it completes.
-- **Risk Prediction view UX**
-  - `frontend/src/features/risk/RiskPredictionForm.jsx` no longer blocks the whole page; fetches risk in background and shows “Updating…” if stale.
-- **Gauge/UI**
-  - Center badge drawn inside SVG; larger radius and stroke; better alignment.
-- **Auth**
-  - Removed login debug alerts in `SignIn.jsx`.
-
-- **Chatbot experience (UI + context + visuals)**
-  - `frontend/src/features/chatbot/Chatbot.jsx` redesigned with hero card, refined bubbles, and suggested prompts.
-  - Added “Patient context” textarea; frontend includes `context` in the chatbot request payload.
-  - Visual snapshot in AI replies: metric badges (HbA1c, FVG, DDS, BMI) + mini trend chart and progress bars.
-  - Broadened visualization trigger keywords (trend/analysis/summary/risk/etc.).
-
-- **Ops**
-  - Documented Render health check at `GET /health`.
-  - Frontend expects `VITE_FASTAPI_URL` for production to target the Render base URL.
-
-  - **Risk Prediction caching (read‑through via MySQL)**
+- **Risk Prediction caching (read‑through via MySQL)**
   - `/risk-dashboard` first checks `patients` table (`last_risk_score`, `risk_model_version`), computes via Ridge model if missing or forced, and persists back to MySQL.
   - Responses include `{ cached, model_version }`.
 - **Patient Messaging simplification**

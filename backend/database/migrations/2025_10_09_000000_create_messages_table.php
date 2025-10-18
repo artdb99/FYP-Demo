@@ -20,6 +20,7 @@ return new class extends Migration
             $table->text('body');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
+
             $table->index(['patient_id', 'doctor_id']);
             $table->index(['patient_id', 'created_at']);
             // Keep patient FK; drop doctor FK to avoid type mismatch with existing users.id
