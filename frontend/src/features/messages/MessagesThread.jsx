@@ -10,6 +10,7 @@ export default function MessagesThread({ patientId: propPatientId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [header, setHeader] = useState({ name: '', role: '' });
   const bottomRef = useRef(null);
 
@@ -35,6 +36,23 @@ export default function MessagesThread({ patientId: propPatientId }) {
     } finally {
       setLoading(false);
       scrollToBottom();
+    }
+  };
+
+  const onClear = async () => {
+    if (!patientId) return;
+    const ok = confirm('Clear entire conversation? This cannot be undone.');
+    if (!ok) return;
+    try {
+      setClearing(true);
+      const res = await fetch(`${apiBase}/api/messages/thread/${patientId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('clear failed');
+      setItems([]);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to clear conversation');
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -100,6 +118,13 @@ export default function MessagesThread({ patientId: propPatientId }) {
         ) : (
           <div className="text-lg font-semibold">Messages</div>
         )}
+        <button
+          onClick={onClear}
+          disabled={clearing}
+          className="ml-3 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md border border-rose-200 text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+        >
+          {clearing ? 'Clearing…' : 'Clear chat'}
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto rounded-2xl border border-emerald-100/60 p-4 bg-gradient-to-b from-white to-emerald-50/20">

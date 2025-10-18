@@ -27,6 +27,7 @@ Route::get('/messages/conversations', [MessageController::class, 'conversations'
 Route::get('/messages/thread/{patientId}', [MessageController::class, 'thread']);
 Route::post('/messages', [MessageController::class, 'send']);
 Route::patch('/messages/{id}/read', [MessageController::class, 'markRead']);
+Route::delete('/messages/thread/{patientId}', [MessageController::class, 'clearThread']);
 
 // Notifications
 Route::get('/notifications', [UserNotificationController::class, 'index']);
