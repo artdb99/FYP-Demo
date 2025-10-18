@@ -172,7 +172,7 @@ export default function MessagesPage() {
         </Card>
 
         {/* Middle: thread */}
-        <Card className="col-span-12 md:col-span-8 lg:col-span-9 rounded-2xl bg-white shadow-md ring-1 ring-emerald-100/60 px-5 py-5 h-full flex flex-col">
+        <Card className="col-span-12 md:col-span-8 lg:col-span-9 rounded-2xl bg-white shadow-md ring-1 ring-emerald-100/60 px-5 py-5">
           {activePatientId ? (
             <MessagesThread />
           ) : (

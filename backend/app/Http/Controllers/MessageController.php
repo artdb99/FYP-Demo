@@ -154,21 +154,4 @@ class MessageController extends Controller
         }
         return response()->json($message);
     }
-
-    // DELETE /api/messages/thread/{patientId}
-    public function clearThread($patientId, Request $request)
-    {
-        $patient = Patient::findOrFail($patientId);
-        $doctorId = $patient->assigned_doctor_id;
-        if (!$doctorId) {
-            return response()->json(['message' => 'No assigned doctor'], 422);
-        }
-
-        // Optionally: authorize based on authenticated user here
-        Message::where('patient_id', $patient->id)
-            ->where('doctor_id', $doctorId)
-            ->delete();
-
-        return response()->json(['status' => 'ok']);
-    }
 }
