@@ -1,4 +1,4 @@
-name: Deploy FastAPI (Container)
+name: Build FastAPI Image
 
 on:
   workflow_dispatch:
@@ -6,13 +6,12 @@ on:
     branches: [ main ]
 
 jobs:
-  build_and_deploy:
+  build:
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: fastapi
       IMAGE_TAG: ${{ github.sha }}
       REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,10 +32,3 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      - name: Deploy container to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 104384876FastAPIContainer           # create a Web App for Containers with this name
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_STAGING_APP }}
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
