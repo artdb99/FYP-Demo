@@ -16,26 +16,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Validate deps (optional)
         working-directory: backend/fastapi
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Azure login with publish profile
-        uses: azure/login@v2
-        with:
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_STAGING_APP }}
-
-      # Replace <RESOURCE_GROUP_NAME> with your app’s resource group (find it in the App Service Overview or the publish profile)
-      - name: Enable build on deploy + set CORS origins
-        run: |
-          az webapp config appsettings set \
-            --name 104384876FastAPI \
-            --resource-group fyp-group-14 \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true \
-                      FRONTEND_ORIGIN=https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net \
-                      LARAVEL_ORIGIN=https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
