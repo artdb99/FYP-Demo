@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+antenv
+__oryx_packages__/
+home/
+.git/
+.gitignore
