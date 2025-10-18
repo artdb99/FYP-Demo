@@ -28,3 +28,4 @@ jobs:
           app-name: 104384876FastAPI
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_STAGING_APP }}
           package: backend/fastapi
+          enable-oryx-build: true

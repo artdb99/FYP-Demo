@@ -107,7 +107,7 @@ app.add_middleware(
     allow_origins=[
         os.getenv("FRONTEND_ORIGIN", "http://localhost:5174"),
         os.getenv("LARAVEL_ORIGIN", "https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net"),
-        
+
     ],
     allow_credentials=True,
     allow_methods=["*"],
