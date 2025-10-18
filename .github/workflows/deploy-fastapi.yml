@@ -32,7 +32,7 @@ jobs:
         run: |
           az webapp config appsettings set \
             --name 104384876FastAPI \
-            --resource-group <RESOURCE_GROUP_NAME> \
+            --resource-group fyp-group-14 \
             --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true \
                       FRONTEND_ORIGIN=https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net \
                       LARAVEL_ORIGIN=https://104384876laravel-cwh4axg4d4h5f0ha.southeastasia-01.azurewebsites.net
